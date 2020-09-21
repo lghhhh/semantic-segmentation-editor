@@ -16,10 +16,11 @@ function bytelog(val) {
 }
 
 // compute how many bytes an array of integers would use once compressed
-FastIntegerCompression.computeCompressedSizeInBytes = function(input) {
+// 计算一次压缩后整数数组将使用多少个字节
+FastIntegerCompression.computeCompressedSizeInBytes = function (input) {
     var c = input.length;
     var answer = 0;
-    for(var i = 0; i < c; i++) {
+    for (var i = 0; i < c; i++) {
         answer += bytelog(input[i]);
     }
     return answer;
@@ -27,32 +28,33 @@ FastIntegerCompression.computeCompressedSizeInBytes = function(input) {
 
 
 // compress an array of integers, return a compressed buffer (as an ArrayBuffer)
-FastIntegerCompression.compress = function(input) {
+// 压缩整数数组，返回压缩缓冲区（作为ArrayBuffer）
+FastIntegerCompression.compress = function (input) {
     var c = input.length;
     var buf = new ArrayBuffer(FastIntegerCompression.computeCompressedSizeInBytes(input));
-    var view   = new Int8Array(buf);
+    var view = new Int8Array(buf);
     var pos = 0;
-    for(var i = 0; i < c; i++) {
+    for (var i = 0; i < c; i++) {
         var val = input[i];
         if (val < (1 << 7)) {
-            view[pos++] = val ;
+            view[pos++] = val;
         } else if (val < (1 << 14)) {
             view[pos++] = (val & 0x7F) | 0x80;
             view[pos++] = val >>> 7;
         } else if (val < (1 << 21)) {
             view[pos++] = (val & 0x7F) | 0x80;
-            view[pos++] = ( (val >>> 7) & 0x7F ) | 0x80;
+            view[pos++] = ((val >>> 7) & 0x7F) | 0x80;
             view[pos++] = val >>> 14;
         } else if (val < (1 << 28)) {
-            view[pos++] = (val & 0x7F ) | 0x80 ;
-            view[pos++] = ( (val >>> 7) & 0x7F ) | 0x80;
-            view[pos++] = ( (val >>> 14) & 0x7F ) | 0x80;
+            view[pos++] = (val & 0x7F) | 0x80;
+            view[pos++] = ((val >>> 7) & 0x7F) | 0x80;
+            view[pos++] = ((val >>> 14) & 0x7F) | 0x80;
             view[pos++] = val >>> 21;
         } else {
-            view[pos++] = ( val & 0x7F ) | 0x80;
-            view[pos++] = ( (val >>> 7) & 0x7F ) | 0x80;
-            view[pos++] = ( (val >>> 14) & 0x7F ) | 0x80;
-            view[pos++] = ( (val >>> 21) & 0x7F ) | 0x80;
+            view[pos++] = (val & 0x7F) | 0x80;
+            view[pos++] = ((val >>> 7) & 0x7F) | 0x80;
+            view[pos++] = ((val >>> 14) & 0x7F) | 0x80;
+            view[pos++] = ((val >>> 21) & 0x7F) | 0x80;
             view[pos++] = val >>> 28;
         }
     }
@@ -60,17 +62,19 @@ FastIntegerCompression.compress = function(input) {
 };
 
 // from a compressed array of integers stored ArrayBuffer, compute the number of compressed integers by scanning the input
-FastIntegerCompression.computeHowManyIntegers = function(input) {
-    var view   = new Int8Array(input);
+//从存储的ArrayBuffer的压缩整数数组中，通过扫描输入来计算压缩整数的数量
+FastIntegerCompression.computeHowManyIntegers = function (input) {
+    var view = new Int8Array(input);
     var c = view.length;
     var count = 0;
-    for(var i = 0; i < c; i++) {
-        count += (input[i]>>>7);
+    for (var i = 0; i < c; i++) {
+        count += (input[i] >>> 7);
     }
     return c - count;
 };
 // uncompress an array of integer from an ArrayBuffer, return the array
-FastIntegerCompression.uncompress = function(input) {
+//从ArrayBuffer解压缩整数数组，返回该数组
+FastIntegerCompression.uncompress = function (input) {
     var array = [];
     var inbyte = new Int8Array(input);
     var end = inbyte.length;
@@ -186,23 +190,23 @@ LZW = {
     }
 };
 
-function objectToBytes(obj){
+function objectToBytes(obj) {
     let payload = JSON.stringify(obj);
     payload = LZW.compress(payload);
     payload = FastIntegerCompression.compress(payload);
     return payload;
 }
 
-function bytesToObject(bytes){
+function bytesToObject(bytes) {
 
-    if (bytes.byteLength  > 0) {
+    if (bytes.byteLength > 0) {
         const data = FastIntegerCompression.uncompress(bytes);
         const str = LZW.decompress(data);
         return JSON.parse(str);
-    }else return null;
+    } else return null;
 }
 
 export default {
-    compress: (data)=>(objectToBytes(data)),
-    uncompress: (data)=>(bytesToObject(data))
+    compress: (data) => (objectToBytes(data)),
+    uncompress: (data) => (bytesToObject(data))
 };

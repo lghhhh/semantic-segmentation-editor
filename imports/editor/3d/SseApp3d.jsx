@@ -2,15 +2,15 @@ import React from 'react';
 
 import SseClassChooser from "../../common/SseClassChooser";
 
-import {darkBaseTheme, MuiThemeProvider} from '@material-ui/core/styles';
+import { darkBaseTheme, MuiThemeProvider } from '@material-ui/core/styles';
 
-import {Meteor} from "meteor/meteor";
+import { Meteor } from "meteor/meteor";
 import SseSnackbar from "../../common/SsePopup";
-import {withTracker} from 'meteor/react-meteor-data';
+import { withTracker } from 'meteor/react-meteor-data';
 import SseBottomBar from "../../common/SseBottomBar";
 
 import SseConfirmationDialog from "../../common/SseConfirmationDialog";
-import {Autorenew} from 'mdi-material-ui';
+import { Autorenew } from 'mdi-material-ui';
 import SseTheme from "../../common/SseTheme";
 import SseSetOfClasses from "../../common/SseSetOfClasses";
 import SseEditor3d from "./SseEditor3d";
@@ -31,7 +31,7 @@ export default class SseApp3d extends React.Component {
         this.classesSets = [];
         Meteor.call("getClassesSets", (err, res) => {
             this.classesSets = res.map(cset => new SseSetOfClasses(cset));
-            this.setState({classesReady: true});
+            this.setState({ classesReady: true });
         });
     }
 
@@ -56,12 +56,12 @@ export default class SseApp3d extends React.Component {
             return null;
         return (
             <div className="w100 h100">
-                <SseTooltips3d/>
+                <SseTooltips3d /> {/* 操作提示（默认隐藏） */}
                 <MuiThemeProvider
                     theme={new SseTheme().theme}>
                     <div className="w100 h100 editor">
                         <div className="vflex w100 h100 box1">
-                            <SseToolbar3d/>
+                            <SseToolbar3d />
                             <div className="hflex grow box2 h0">
                                 <SseClassChooser
                                     mode="3d"
@@ -84,20 +84,20 @@ export default class SseApp3d extends React.Component {
                                                 className="hflex flex-align-items-center absolute w100 h100">
                                                 < div
                                                     className="grow vflex flex-align-items-center">
-                                                    <Autorenew/>
+                                                    <Autorenew />
                                                 </div>
                                             </div>
 
                                         </div>
-                                        <SseCameraToolbar/>
+                                        <SseCameraToolbar />
                                     </div>
-                                    <SseObjectToolbar/>
+                                    <SseObjectToolbar />
                                 </div>
 
                             </div>
-                            <SseBottomBar/>
+                            <SseBottomBar />
                         </div>
-                        <SseSnackbar/>
+                        <SseSnackbar />
                         <SseConfirmationDialog
                             startMessage="reset-start"
                             endMessage="reset-end"

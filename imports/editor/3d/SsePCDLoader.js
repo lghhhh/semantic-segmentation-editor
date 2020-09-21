@@ -18,48 +18,48 @@ export default class SsePCDLoader {
             },
 
             parse: function (data, url) {
-                function decompressLZF( inData, outLength ) {
+                function decompressLZF(inData, outLength) {
                     // from https://gitlab.com/taketwo/three-pcd-loader/blob/master/decompress-lzf.js
                     var inLength = inData.length;
-                    var outData = new Uint8Array( outLength );
+                    var outData = new Uint8Array(outLength);
                     var inPtr = 0;
                     var outPtr = 0;
                     var ctrl;
                     var len;
                     var ref;
                     do {
-                        ctrl = inData[ inPtr ++ ];
-                        if ( ctrl < ( 1 << 5 ) ) {
-                            ctrl ++;
-                            if ( outPtr + ctrl > outLength ) throw new Error( 'Output buffer is not large enough' );
-                            if ( inPtr + ctrl > inLength ) throw new Error( 'Invalid compressed data' );
+                        ctrl = inData[inPtr++];
+                        if (ctrl < (1 << 5)) {
+                            ctrl++;
+                            if (outPtr + ctrl > outLength) throw new Error('Output buffer is not large enough');
+                            if (inPtr + ctrl > inLength) throw new Error('Invalid compressed data');
                             do {
-                                outData[ outPtr ++ ] = inData[ inPtr ++ ];
-                            } while ( -- ctrl );
+                                outData[outPtr++] = inData[inPtr++];
+                            } while (--ctrl);
                         } else {
                             len = ctrl >> 5;
-                            ref = outPtr - ( ( ctrl & 0x1f ) << 8 ) - 1;
-                            if ( inPtr >= inLength ) throw new Error( 'Invalid compressed data' );
-                            if ( len === 7 ) {
-                                len += inData[ inPtr ++ ];
-                                if ( inPtr >= inLength ) throw new Error( 'Invalid compressed data' );
+                            ref = outPtr - ((ctrl & 0x1f) << 8) - 1;
+                            if (inPtr >= inLength) throw new Error('Invalid compressed data');
+                            if (len === 7) {
+                                len += inData[inPtr++];
+                                if (inPtr >= inLength) throw new Error('Invalid compressed data');
                             }
-                            ref -= inData[ inPtr ++ ];
-                            if ( outPtr + len + 2 > outLength ) throw new Error( 'Output buffer is not large enough' );
-                            if ( ref < 0 ) throw new Error( 'Invalid compressed data' );
-                            if ( ref >= outPtr ) throw new Error( 'Invalid compressed data' );
+                            ref -= inData[inPtr++];
+                            if (outPtr + len + 2 > outLength) throw new Error('Output buffer is not large enough');
+                            if (ref < 0) throw new Error('Invalid compressed data');
+                            if (ref >= outPtr) throw new Error('Invalid compressed data');
                             do {
-                                outData[ outPtr ++ ] = outData[ ref ++ ];
-                            } while ( -- len + 2 );
+                                outData[outPtr++] = outData[ref++];
+                            } while (--len + 2);
                         }
-                    } while ( inPtr < inLength );
+                    } while (inPtr < inLength);
                     return outData;
                 }
 
                 function parseHeader(data) {
                     var PCDheader = {};
-                    var result1 = data.search(/[\r\n]DATA\s(\S*)\s/i);
-                    var result2 = /[\r\n]DATA\s(\S*)\s/i.exec(data.substr(result1 - 1));
+                    var result1 = data.search(/[\r\n]DATA\s(\S*)\s/i); //一个在字符串中测试匹配的String方法，它返回匹配到的位置索引，或者在失败时返回-1。
+                    var result2 = /[\r\n]DATA\s(\S*)\s/i.exec(data.substr(result1 - 1)); // 一个在字符串中执行查找匹配的RegExp方法，它返回一个数组（未匹配到则返回 null）。
                     PCDheader.data = result2[1];
                     PCDheader.headerLen = result2[0].length + result1;
                     PCDheader.str = data.substr(0, PCDheader.headerLen);
@@ -134,7 +134,7 @@ export default class SsePCDLoader {
 
                 var textData = this.serverMode ? (new Buffer(data)).toString() : THREE.LoaderUtils.decodeText(data);
 
-                // parse header (always ascii format)
+                // parse header (always ascii format) 解析pcd 文件头信息
                 var PCDheader = parseHeader(textData);
 
                 // parse data
@@ -147,21 +147,23 @@ export default class SsePCDLoader {
 
                 if (PCDheader.data === 'ascii') {
                     const meta = PCDheader;
-
+                    // 设定3维向量
                     let camPosition = new THREE.Vector3(parseFloat(meta.viewpoint.tx), parseFloat(meta.viewpoint.ty),
                         parseFloat(meta.viewpoint.tz));
+                    // 设定四元数
                     let camQuaternion = new THREE.Quaternion(meta.viewpoint.qx,
                         meta.viewpoint.qy, meta.viewpoint.qz, meta.viewpoint.qw);
 
                     var offset = PCDheader.offset;
-
+                    // 获取pcd文件头的长度 具体点云数据在头以后
                     var pcdData = textData.substr(PCDheader.headerLen);
+                    // 一个点数据占一行 
                     var lines = pcdData.split('\n');
                     let pt, item;
                     for (var i = 0, l = lines.length - 1; i < l; i++) {
-                        if(lines[i] == ""){continue;}  // Sometimes empty lines are inserted...
+                        if (lines[i] == "") { continue; }  // Sometimes empty lines are inserted...
 
-                        var line = lines[i].split(' ');
+                        var line = lines[i].split(' '); // 分割具体点的数据
                         item = {};
                         payload.push(item);
 
@@ -209,12 +211,12 @@ export default class SsePCDLoader {
                 // normally data in PCD files are organized as array of structures: XYZRGBXYZRGB
                 // binary compressed PCD files organize their data as structure of arrays: XXYYZZRGBRGB
                 // that requires a totally different parsing approach compared to non-compressed data
-                if ( PCDheader.data === 'binary_compressed' ) {
-                    var dataview = new DataView( data.slice( PCDheader.headerLen, PCDheader.headerLen + 8 ) );
-                    var compressedSize = dataview.getUint32( 0, true );
-                    var decompressedSize = dataview.getUint32( 4, true );
-                    var decompressed = decompressLZF( new Uint8Array( data, PCDheader.headerLen + 8, compressedSize ), decompressedSize );
-                    dataview = new DataView( decompressed.buffer );
+                if (PCDheader.data === 'binary_compressed') {
+                    var dataview = new DataView(data.slice(PCDheader.headerLen, PCDheader.headerLen + 8));
+                    var compressedSize = dataview.getUint32(0, true);
+                    var decompressedSize = dataview.getUint32(4, true);
+                    var decompressed = decompressLZF(new Uint8Array(data, PCDheader.headerLen + 8, compressedSize), decompressedSize);
+                    dataview = new DataView(decompressed.buffer);
 
                     var offset = PCDheader.offset;
                     let pt, item;
@@ -224,13 +226,13 @@ export default class SsePCDLoader {
                     let camQuaternion = new THREE.Quaternion(PCDheader.viewpoint.qx,
                         PCDheader.viewpoint.qy, PCDheader.viewpoint.qz, PCDheader.viewpoint.qw);
 
-                    for ( var i = 0; i < PCDheader.points; i ++ ) {
+                    for (var i = 0; i < PCDheader.points; i++) {
                         item = {};
                         payload.push(item);
 
-                        const x = dataview.getFloat32( ( PCDheader.points * offset.x ) + PCDheader.size[ 0 ] * i, true );
-                        const y = dataview.getFloat32( ( PCDheader.points * offset.y ) + PCDheader.size[ 1 ] * i, true );
-                        const z = dataview.getFloat32( ( PCDheader.points * offset.z ) + PCDheader.size[ 2 ] * i, true );
+                        const x = dataview.getFloat32((PCDheader.points * offset.x) + PCDheader.size[0] * i, true);
+                        const y = dataview.getFloat32((PCDheader.points * offset.y) + PCDheader.size[1] * i, true);
+                        const z = dataview.getFloat32((PCDheader.points * offset.z) + PCDheader.size[2] * i, true);
 
                         pt = new THREE.Vector3(x, y, z);
 
@@ -247,10 +249,10 @@ export default class SsePCDLoader {
                         item.z = pt.z;
                         position.push(pt.z);
 
-                        if ( offset.label !== undefined ) {
-                            const classIndex = dataview.getUint8( PCDheader.points * offset.label + PCDheader.size[ 3 ] * i );
+                        if (offset.label !== undefined) {
+                            const classIndex = dataview.getUint8(PCDheader.points * offset.label + PCDheader.size[3] * i);
                             item.classIndex = classIndex;
-                            label.push( classIndex );
+                            label.push(classIndex);
                         } else {
                             item.classIndex = 0;
                             label.push(0);
@@ -273,8 +275,8 @@ export default class SsePCDLoader {
 
                 // binary
 
-                if ( PCDheader.data === 'binary' ) {
-                    var dataview = new DataView( data, PCDheader.headerLen );
+                if (PCDheader.data === 'binary') {
+                    var dataview = new DataView(data, PCDheader.headerLen);
                     var offset = PCDheader.offset;
                     let pt, item;
                     // test.push(offset);
@@ -283,13 +285,13 @@ export default class SsePCDLoader {
                     let camQuaternion = new THREE.Quaternion(PCDheader.viewpoint.qx,
                         PCDheader.viewpoint.qy, PCDheader.viewpoint.qz, PCDheader.viewpoint.qw);
 
-                    for ( var i = 0, row = 0; i < PCDheader.points; i ++, row += PCDheader.rowSize ) {
+                    for (var i = 0, row = 0; i < PCDheader.points; i++, row += PCDheader.rowSize) {
                         item = {};
                         payload.push(item);
 
-                        const x = dataview.getFloat32( row + offset.x, true );
-                        const y = dataview.getFloat32( row + offset.y, true );
-                        const z = dataview.getFloat32( row + offset.z, true );
+                        const x = dataview.getFloat32(row + offset.x, true);
+                        const y = dataview.getFloat32(row + offset.y, true);
+                        const z = dataview.getFloat32(row + offset.z, true);
 
                         pt = new THREE.Vector3(x, y, z);
 
@@ -306,8 +308,8 @@ export default class SsePCDLoader {
                         item.z = pt.z;
                         position.push(pt.z);
 
-                        if ( offset.label !== undefined ) {
-                            const classIndex = dataview.getUint8( row + offset.label );
+                        if (offset.label !== undefined) {
+                            const classIndex = dataview.getUint8(row + offset.label);
                             item.classIndex = classIndex;
                             label.push(classIndex);
                         } else {
@@ -345,16 +347,16 @@ export default class SsePCDLoader {
 
                 geometry.computeBoundingSphere();
 
-                var material = new THREE.PointsMaterial({size: 2, color: 0xE9A96F});
+                var material = new THREE.PointsMaterial({ size: 2, color: 0xE9A96F });
                 material.sizeAttenuation = false;
 
-                // build mesh
+                // build mesh 这里存在了PCDLoader的 对象原型中
                 var mesh = new THREE.Points(geometry, material);
                 var name = url.split('').reverse().join('');
                 name = /([^\/]*)/.exec(name);
                 name = name[1].split('').reverse().join('');
                 mesh.name = url;
-                return {position, label, header: PCDheader, rgb};
+                return { position, label, header: PCDheader, rgb };
             }
 
         };

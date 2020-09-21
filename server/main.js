@@ -1,12 +1,12 @@
-import {Meteor} from 'meteor/meteor';
-import {createWriteStream, lstatSync, readdirSync, readFile, readFileSync, existsSync} from "fs";
-import {basename, extname, join} from "path";
+import { Meteor } from 'meteor/meteor';
+import { createWriteStream, lstatSync, readdirSync, readFile, readFileSync, existsSync } from "fs";
+import { basename, extname, join } from "path";
 import url from "url";
 import ColorScheme from "color-scheme";
 import config from "./config";
 const demoMode = Meteor.settings.configuration["demo-mode"];
 
-let {classes} = config;
+let { classes } = config;
 
 Meteor.methods({
     'getClassesSets'() {
@@ -68,7 +68,8 @@ Meteor.methods({
         },
     */
     'images'(folder, pageIndex, pageLength) {
-        const isDirectory = source => lstatSync(source).isDirectory();
+        // 判断 source是否是目录 是：true
+        const isDirectory = source => lstatSync(source).isDirectory(); // lstatSync  根据参数 返回fs.Stats（提供文件的信息）
         const isImage = source => {
             const stat = lstatSync(source);
             return (stat.isFile() || stat.isSymbolicLink()) &&
@@ -81,6 +82,7 @@ Meteor.methods({
                 )
         };
         const getDirectories = source =>
+            // basename（） 会返回参数1（path）的最后部分，如果参数2 设定了文件后缀 只会返回文件名 
             readdirSync(source).map(name => join(source, name)).filter(isDirectory).map(a => basename(a));
 
         const getImages = source =>
@@ -103,16 +105,18 @@ Meteor.methods({
 
         pageIndex = parseInt(pageIndex);
         pageLength = parseInt(pageLength);
+        // 对前端传进来的path 进行反转义
         const folderSlash = folder ? decodeURIComponent(folder) + "/" : "/";
+        // join 将path 片段连接到一起
         const leaf = join(config.imagesFolder, (folderSlash ? folderSlash : ""));
-
+        // 同步方法 判断路径是否存在
         const existing = existsSync(leaf);
 
         if (existing && !isDirectory(leaf)) {
-            return {error: leaf + " is a file but should be a folder. Check the documentation and your settings.json"};
+            return { error: leaf + " is a file but should be a folder. Check the documentation and your settings.json" };
         }
         if (!existing) {
-            return {error: leaf + " does not exists. Check the documentation and your settings.json"};
+            return { error: leaf + " does not exists. Check the documentation and your settings.json" };
         }
 
         const dirs = getDirectories(leaf);
@@ -143,8 +147,8 @@ Meteor.methods({
         if (!sample.firstEditDate)
             sample.firstEditDate = new Date();
         if (sample.tags) {
-            SseProps.upsert({key: "tags"}, {$addToSet: {value: {$each: sample.tags}}});
+            SseProps.upsert({ key: "tags" }, { $addToSet: { value: { $each: sample.tags } } });
         }
-        SseSamples.upsert({url: sample.url}, sample);
+        SseSamples.upsert({ url: sample.url }, sample);
     }
 });

@@ -1,17 +1,17 @@
 import React from 'react';
 
-import {darkBaseTheme, MuiThemeProvider} from '@material-ui/core/styles';
+import { darkBaseTheme, MuiThemeProvider } from '@material-ui/core/styles';
 import SseText from "../common/SseText";
 import SseImageThumbnail from "./SseImageThumbnail";
 
 import SseNavigatorToolbar from "./SseNavigatorToolbar";
 
-import {CardText, CardTitle, IconButton, Typography} from '@material-ui/core';
+import { CardText, CardTitle, IconButton, Typography } from '@material-ui/core';
 
-import {withTracker} from 'meteor/react-meteor-data';
-import {Meteor} from "meteor/meteor";
-import {Link} from 'react-router-dom'
-import {ArrowLeftBold, ArrowRightBold, Folder} from 'mdi-material-ui';
+import { withTracker } from 'meteor/react-meteor-data';
+import { Meteor } from "meteor/meteor";
+import { Link } from 'react-router-dom'
+import { ArrowLeftBold, ArrowRightBold, Folder } from 'mdi-material-ui';
 import SseTheme from "../common/SseTheme";
 import SseGlobals from "../common/SseGlobals";
 import SseMsg from "../common/SseMsg";
@@ -21,7 +21,7 @@ class SseNavigatorApp extends React.Component {
         super();
         SseMsg.register(this);
         this.increment = 20;
-        this.state = {pageLength: this.increment, selection: new Set()};
+        this.state = { pageLength: this.increment, selection: new Set() };
     }
 
     serverCall(props) {
@@ -34,7 +34,7 @@ class SseNavigatorApp extends React.Component {
             this.setState(this.state);
         }
         Meteor.call("images", params.path, fi, ti, (err, res) => {
-            this.setState({data: res});
+            this.setState({ data: res });
             if (res) {
 
                 let msg = "";
@@ -50,9 +50,9 @@ class SseNavigatorApp extends React.Component {
                     if (res.imagesCount > 1)
                         msg += "s";
                 }
-                this.sendMsg("folderStats", {message: msg});
+                this.sendMsg("folderStats", { message: msg });
 
-            }else{
+            } else {
                 console.log(err);
             }
         });
@@ -74,50 +74,51 @@ class SseNavigatorApp extends React.Component {
         if (this.state.data == undefined)
             return <div></div>
 
-        if (this.state.data.error){
+        if (this.state.data.error) {
             return <div>{this.state.data.error}</div>
         }
         return (
             <MuiThemeProvider theme={new SseTheme().theme}>
                 <div className="w100">
-                    <SseNavigatorToolbar history={this.props.history}/>
+                    <SseNavigatorToolbar history={this.props.history} />
                     <div className="sse-pager hflex">
                         <Link to={this.state.data.previousPage || "#"}>
                             <IconButton touch="true"
-                                        classes={{"colorPrimary": "white"}}
-                                        className={this.state.data.previousPage ? "" : "visibility-hidden"}>
-                                <ArrowLeftBold/>
+                                classes={{ "colorPrimary": "white" }}
+                                className={this.state.data.previousPage ? "" : "visibility-hidden"}>
+                                <ArrowLeftBold />
                             </IconButton>
                         </Link>
                         <SseText msgKey="folderStats" className="sse-folder-stats"></SseText>
                         <Link to={this.state.data.nextPage || "#"}>
                             <IconButton touch="true"
-                                        classes={{"colorPrimary": "white"}}
-                                        className={this.state.data.nextPage ? "" : "visibility-hidden"}>
-                                <ArrowRightBold/>
+                                classes={{ "colorPrimary": "white" }}
+                                className={this.state.data.nextPage ? "" : "visibility-hidden"}>
+                                <ArrowRightBold />
                             </IconButton>
                         </Link>
                     </div>
 
-                        <div className="hflex wrap w100 h100">
+                    <div className="hflex wrap w100 h100">
                         {this.state.data.folders.map((p) =>
                             (<Link key={p.url} to={p.url}>
                                 <div className="vflex flex-align-items-center sse-folder">
                                     <Folder />
                                     <Typography align="center" noWrap
-                                    style={{width: "200px"}}>{p.name}</Typography>
+                                        style={{ width: "200px" }}>{p.name}</Typography>
                                 </div>
                             </Link>)
                         )}
                     </div>
+
                     <div className="hflex wrap w100 h100">
                         {this.state.data.images.map((image) =>
                             (<div
-                                  onClick={() => this.startEditing(image)}
-                                  onDoubleClick={() => {this.startEditing(image)}}
-                                  key={SseGlobals.getFileUrl(image.url) + Math.random()}>
+                                onClick={() => this.startEditing(image)}
+                                onDoubleClick={() => { this.startEditing(image) }}
+                                key={SseGlobals.getFileUrl(image.url) + Math.random()}>
                                 <SseImageThumbnail image={image}
-                                                   annotated={this.props.urlMap.get(decodeURIComponent(image.url))}/>
+                                    annotated={this.props.urlMap.get(decodeURIComponent(image.url))} />
                             </div>)
                         )}
                     </div>
@@ -129,10 +130,39 @@ class SseNavigatorApp extends React.Component {
 }
 
 export default withTracker((props) => {
+    // props 数据如下
+    // {
+    //     "match":{
+    //         "path":"/browse/:fromIndex/:pageLength/:path?",
+    //         "url":"/browse/0/20/",
+    //         "isExact":true,
+    //         "params":{
+    //             "fromIndex":"0",
+    //             "pageLength":"20"
+    //         }
+    //     },
+    //     "location":{
+    //         "pathname":"/browse/0/20/",
+    //         "search":"",
+    //         "hash":"",
+    //         "key":"2w3rdw"
+    //     },
+    //     "history":{
+    //         "length":4,
+    //         "action":"POP",
+    //         "location":{
+    //             "pathname":"/browse/0/20/",
+    //             "search":"",
+    //             "hash":"",
+    //             "key":"2w3rdw"
+    //         }
+    //     }
+    // }
+
     Meteor.subscribe("sse-labeled-images");
-    const annotated = SseSamples.find({file: {"$exists": true}}).fetch();
+    const annotated = SseSamples.find({ file: { "$exists": true } }).fetch();  // $exists 包含这个字段，包括值为null 的文档
     let urlMap = new Map();
     annotated.forEach(o => urlMap.set(decodeURIComponent(o.url), true));
-    return {urlMap};
+    return { urlMap };
 })(SseNavigatorApp);
 

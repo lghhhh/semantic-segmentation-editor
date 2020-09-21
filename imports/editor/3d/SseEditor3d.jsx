@@ -1,8 +1,8 @@
-import {Random} from 'meteor/random';
+import { Random } from 'meteor/random';
 
 import React from 'react';
 import * as THREE from 'three';
-import {BoxHelper} from './GradientBoxHelper';
+import { BoxHelper } from './GradientBoxHelper';
 import SseGlobals from "../../common/SseGlobals";
 import SsePCDLoader from "./SsePCDLoader";
 import OrbitControls from "./tools/OrbitControls"
@@ -40,7 +40,7 @@ export default class SseEditor3d extends React.Component {
         this.autoFocusMode = false;
         this.colorBoost = 0;
         this.orientationArrows = new Map();
-        this.state = {ready: false};
+        this.state = { ready: false };
         this.screen = {};
         this.colorCache = new Map();
         this.pointSizeWithAttenuation = .03;
@@ -51,7 +51,7 @@ export default class SseEditor3d extends React.Component {
         this.pixelProjection = new Map();
         this.highlightedIndex = undefined;
         this.dataManager = new SseDataManager();
-        
+
         this.tweenDuration = 500;
 
         this.cameraState = {
@@ -120,18 +120,19 @@ export default class SseEditor3d extends React.Component {
 
     render() {
         return (<div className="absoluteTopLeftZeroW100H100">
-                <canvas id="canvas3d" className="absoluteTopLeftZeroW100H100">
-                </canvas>
-                <canvas id="canvasSelection" className="absoluteTopLeftZeroW100H100"></canvas>
-                <canvas id="canvasMouse" className="absoluteTopLeftZeroW100H100"></canvas>
-            </div>
+            <canvas className="editor-3d-2d"></canvas>
+            <canvas id="canvas3d" className="absoluteTopLeftZeroW100H100">
+            </canvas>
+            <canvas id="canvasSelection" className="absoluteTopLeftZeroW100H100"></canvas>
+            <canvas id="canvasMouse" className="absoluteTopLeftZeroW100H100"></canvas>
+        </div>
         );
     }
 
     get classesDescriptors() {
         if (!this._classesData) {
             const byIndex = this.activeSoc.descriptors;
-            this._classesData = {byName: this.activeSoc.byLabel, byIndex};
+            this._classesData = { byName: this.activeSoc.byLabel, byIndex };
 
             this.activeSoc.labels.forEach((k) => {
                 let c = this.activeSoc.byLabel.get(k);
@@ -155,14 +156,14 @@ export default class SseEditor3d extends React.Component {
                 const classData = this.classesDescriptors.byIndex[pt.classIndex];
                 if (classData.visible) {
                     this.assignNewClass(pos, pt.classIndex);
-                    const {x, y, z} = this.cloudData[pos];
+                    const { x, y, z } = this.cloudData[pos];
                     this.setPosition(pos, x, y, z);
                     this.showIndex(pos);
                 }
             });
             this.fitView();
             this.updateGlobalBox();
-            this.sendMsg("object-select", {value: undefined});
+            this.sendMsg("object-select", { value: undefined });
             this.setViewFilterState(undefined);
         }
     }
@@ -196,7 +197,7 @@ export default class SseEditor3d extends React.Component {
             if (!visible) {
                 this.hideIndex(pos);
             } else {
-                const {x, y, z} = this.cloudData[pos];
+                const { x, y, z } = this.cloudData[pos];
                 this.setPosition(pos, x, y, z);
                 this.showIndex(pos);
             }
@@ -206,7 +207,7 @@ export default class SseEditor3d extends React.Component {
 
     }
 
-    setColor(idx, color = {red: 1, green: 0, blue: 0}) {
+    setColor(idx, color = { red: 1, green: 0, blue: 0 }) {
         const colors = this.colorArray;
         const altColor = this.getCachedColor(color.red, color.green, color.blue, this.colorBoost);
         colors[idx * 3] = altColor.r;
@@ -227,7 +228,7 @@ export default class SseEditor3d extends React.Component {
         if (this.selectedObject) {
             this.selectedObject.classIndex = classIndex;
             this.selectedObject.points.forEach(idx => this.assignNewClass(idx, classIndex));
-            this.sendMsg("object-select", {value: this.selectedObject})
+            this.sendMsg("object-select", { value: this.selectedObject })
         }
         this.invalidateColor();
         this.invalidateCounters();
@@ -242,11 +243,11 @@ export default class SseEditor3d extends React.Component {
             points = this.visibleIndices;
         if (points) {
 
-            const obj = {id: Random.id(), classIndex: this.activeClassIndex, points: Array.from(points)};
+            const obj = { id: Random.id(), classIndex: this.activeClassIndex, points: Array.from(points) };
             this.objects.add(obj);
 
-            this.sendMsg("objects-update", {value: this.objects});
-            this.sendMsg("object-select", {value: obj});
+            this.sendMsg("objects-update", { value: this.objects });
+            this.sendMsg("object-select", { value: obj });
             this.changeClassOfSelection(this.activeClassIndex);
 
         }
@@ -256,21 +257,21 @@ export default class SseEditor3d extends React.Component {
     invalidateCounters() {
         let i = 0;
         this.activeSoc.labels.forEach(a => {
-            const arg = {classIndex: i, count: (this.cloudData.byClassIndex[i] || {size: 0}).size};
+            const arg = { classIndex: i, count: (this.cloudData.byClassIndex[i] || { size: 0 }).size };
             this.sendMsg("class-instance-count", arg);
             i++;
         });
     }
 
     invalidateObjects() {
-        this.sendMsg("objects-update", {value: this.objects});
+        this.sendMsg("objects-update", { value: this.objects });
     }
 
     deleteSelectedObject() {
         if (this.selectedObject) {
             this.objects.delete(this.selectedObject);
             this.selectedObject = undefined;
-            this.sendMsg("object-select", {value: undefined});
+            this.sendMsg("object-select", { value: undefined });
             this.invalidateObjects();
             this.saveAll();
         }
@@ -280,7 +281,7 @@ export default class SseEditor3d extends React.Component {
         this.selectedObject = obj;
         this.ungrayAll();
         if (this.selectedObject) {
-            this.sendMsg("classIndex-select", {value: obj.classIndex});
+            this.sendMsg("classIndex-select", { value: obj.classIndex });
             if (this.autoFilterMode)
                 this.filterIndices(this.selectedObject.points);
             else {
@@ -299,14 +300,14 @@ export default class SseEditor3d extends React.Component {
             this.setViewFilterState("object");
             this.updateGlobalBox();
             if (!this.selectionIsEmpty()) {
-                this.sendMsg("enableCommand", {name: "addPointsObjectCommand"});
+                this.sendMsg("enableCommand", { name: "addPointsObjectCommand" });
             }
         }
     }
 
     unselectObject() {
         this.selectedObject = undefined;
-        this.sendMsg("object-select", {value: undefined});
+        this.sendMsg("object-select", { value: undefined });
         this.displayAll();
     }
 
@@ -350,8 +351,8 @@ export default class SseEditor3d extends React.Component {
         SseMsg.register(this);
         this.init();
         const changePointSize = (amount) => {
-            const withAttenuation = {min: 0.01, max: .5, increment: 0.01};
-            const withoutAttenuation = {min: 1, max: 5, increment: 0.5};
+            const withAttenuation = { min: 0.01, max: .5, increment: 0.01 };
+            const withoutAttenuation = { min: 1, max: 5, increment: 0.5 };
             const bounds = this.cloudObject.material.sizeAttenuation ? withAttenuation : withoutAttenuation;
             this.cloudObject.material.size = bounds.min + amount * (bounds.max - bounds.min);
 
@@ -434,22 +435,22 @@ export default class SseEditor3d extends React.Component {
 
         this.sendMsg("editor-ready");
 
-        this.onMsg("autoFilter", ({value}) => {
+        this.onMsg("autoFilter", ({ value }) => {
             this.autoFilterMode = value;
             this.selectObject(this.selectedObject);
         });
 
-        this.onMsg("globalbox", ({value}) => {
+        this.onMsg("globalbox", ({ value }) => {
             this.globalBoxMode = this.globalBoxObject.visible = value;
         });
 
-        this.onMsg("selectionOutline", ({value}) => {
+        this.onMsg("selectionOutline", ({ value }) => {
             this.selectionOutlineMode = !this.selectionOutlineMode;
             this.invalidateCanvasSelection()
         });
 
 
-        this.onMsg("autoFocus", ({value}) => {
+        this.onMsg("autoFocus", ({ value }) => {
             this.autoFocusMode = value;
             this.selectObject(this.selectedObject);
         });
@@ -496,7 +497,7 @@ export default class SseEditor3d extends React.Component {
         this.onMsg("rgb-toggle", () => this.toggleRgbDisplay());
     }
 
-    componentWillUnmount(){
+    componentWillUnmount() {
         SseMsg.unregister(this);
         this.canvasContainer.removeEventListener("mousedown", this.mouseDown.bind(this), false);
         this.canvasContainer.removeEventListener("mousemove", this.mouseMove.bind(this), false);
@@ -568,12 +569,12 @@ export default class SseEditor3d extends React.Component {
 
         // setting up OrbitControls, see the official doc for more details
         // https://threejs.org/docs/#examples/en/controls/OrbitControls
-        
+
         // enable panning and keyboard controls
         this.orbiter.enablePan = true;
         this.orbiter.enableKeys = true;
         // set pan button to null, default is RMB, but that's used for labeling
-        this.orbiter.mouseButtons = {ORBIT: THREE.MOUSE.LEFT, ZOOM: THREE.MOUSE.MIDDLE, PAN: null};
+        this.orbiter.mouseButtons = { ORBIT: THREE.MOUSE.LEFT, ZOOM: THREE.MOUSE.MIDDLE, PAN: null };
 
         this.orbiter.addEventListener("start", this.orbiterStart.bind(this), false);
         this.orbiter.addEventListener("change", this.orbiterChange.bind(this), false);
@@ -607,7 +608,7 @@ export default class SseEditor3d extends React.Component {
     showIndex(idx) {
         this.hiddenIndices.delete(idx);
         this.visibleIndices.add(idx);
-        const {x, y, z} = this.cloudData[idx];
+        const { x, y, z } = this.cloudData[idx];
 
         this.setPosition(idx, x, y, z);
         this.invalidateColor();
@@ -639,7 +640,7 @@ export default class SseEditor3d extends React.Component {
             }
             else {
 
-                this.cameraPresetInfo = {where, eye: this.cameraEye, target: this.cameraTarget};
+                this.cameraPresetInfo = { where, eye: this.cameraEye, target: this.cameraTarget };
             }
         }
         let eye;
@@ -723,7 +724,7 @@ export default class SseEditor3d extends React.Component {
         state.rangeX = target1.x - target0.x;
         state.rangeY = target1.y - target0.y;
         state.rangeZ = target1.z - target0.z;
-        this.cameraTween.to({position: 1}, this.tweenDuration).easing(TWEEN.Easing.Quadratic.Out).start();
+        this.cameraTween.to({ position: 1 }, this.tweenDuration).easing(TWEEN.Easing.Quadratic.Out).start();
     }
 
     generateColorCache() {
@@ -748,32 +749,32 @@ export default class SseEditor3d extends React.Component {
         };
 
         this.classesDescriptors.byIndex.forEach(desc => {
-                const color = Color(desc.color);
-                for (let i = 0; i <= 1; i += .05) {
-                    i = Math.round(i * 100) / 100;
-                    const altColor = color.lighten(i).saturate(i).rgb().object();
-                    altColor.r /= 256;
-                    altColor.g /= 256;
-                    altColor.b /= 256;
-                    tripleMap(i, altColor, desc.red, desc.green, desc.blue);
-                }
+            const color = Color(desc.color);
+            for (let i = 0; i <= 1; i += .05) {
+                i = Math.round(i * 100) / 100;
+                const altColor = color.lighten(i).saturate(i).rgb().object();
+                altColor.r /= 256;
+                altColor.g /= 256;
+                altColor.b /= 256;
+                tripleMap(i, altColor, desc.red, desc.green, desc.blue);
             }
+        }
         );
     }
 
     getCachedColor(r, g, b, l) {
         const v1 = this.colorCache.get(l);
         if (!v1)
-            return {r, g, b};
+            return { r, g, b };
         const v2 = v1.get(r);
         if (!v2)
-            return {r, g, b};
+            return { r, g, b };
         const v3 = v2.get(g);
         if (!v3)
-            return {r, g, b};
+            return { r, g, b };
         const v4 = v3.get(b);
         if (!v4)
-            return {r, g, b};
+            return { r, g, b };
         return v4;
     }
 
@@ -787,7 +788,7 @@ export default class SseEditor3d extends React.Component {
             const x = state.fromX + state.rangeX * pos;
             const y = state.fromY + state.rangeY * pos;
             const z = state.fromZ + state.rangeZ * pos;
-            this.orbiter.target.copy({x, y, z});
+            this.orbiter.target.copy({ x, y, z });
 
             // Changing camera position
             const phi = state.fromPhi + state.rangePhi * pos;
@@ -809,7 +810,7 @@ export default class SseEditor3d extends React.Component {
 
     setViewFilterState(value) {
         this.viewFilterState = value;
-        this.sendMsg("view-filter", {value});
+        this.sendMsg("view-filter", { value });
     }
 
     selectByPolygon(polygon) {
@@ -857,9 +858,9 @@ export default class SseEditor3d extends React.Component {
         }
 
         if (this.selection.size > 0 && this.selectedObject)
-            this.sendMsg("enableCommand", {name: "addPointsObjectCommand"});
+            this.sendMsg("enableCommand", { name: "addPointsObjectCommand" });
         else
-            this.sendMsg("disableCommand", {name: "addPointsObjectCommand"});
+            this.sendMsg("disableCommand", { name: "addPointsObjectCommand" });
         this.updateGlobalBox();
 
         this.invalidateColor();
@@ -877,7 +878,7 @@ export default class SseEditor3d extends React.Component {
                 message += " (x: " + round2(oc.x)
                     + "m, y: " + round2(oc.y)
                     + "m, z: " + round2(oc.z) + "m)";
-                this.sendMsg("bottom-right-label", {message})
+                this.sendMsg("bottom-right-label", { message })
             }
         } else {
             this.setSelectionFeedback();
@@ -888,7 +889,7 @@ export default class SseEditor3d extends React.Component {
         let msg = this.selection.size + " point selected";
         if (this.selection.size > 1) {
             msg = msg.replace("point", "points");
-            this.sendMsg("bottom-right-label", {message: msg});
+            this.sendMsg("bottom-right-label", { message: msg });
         }
         else {
             this.setOverviewFeedback();
@@ -906,7 +907,7 @@ export default class SseEditor3d extends React.Component {
             message += "m / Height: " + h;
             message += "m / Depth: " + d;
             message += "m";
-            this.sendMsg("bottom-right-label", {message});
+            this.sendMsg("bottom-right-label", { message });
         }
     }
 
@@ -915,16 +916,16 @@ export default class SseEditor3d extends React.Component {
             if (this.displayRgb && this.rgbArray.length > 0) {
                 this.cloudData.forEach((pt, idx) => {
                     var rgb = this.rgbArray[idx];
-                    this.setColor(idx, {red: rgb[0] / 255, green: rgb[1] / 255, blue: rgb[2] / 255});
+                    this.setColor(idx, { red: rgb[0] / 255, green: rgb[1] / 255, blue: rgb[2] / 255 });
                 });
                 this.colorIsDirty = false;
                 this.cloudObject.geometry.attributes.color.needsUpdate = true;
             } else {
                 this.cloudData.forEach((pt, idx) => {
                     if (this.selection.has(idx)) {
-                        this.setColor(idx, {red: 1, green: 0});
+                        this.setColor(idx, { red: 1, green: 0 });
                     } else if (this.grayIndices.has(idx)) {
-                        this.setColor(idx, {red: .5, green: 0.5, blue: 0.5});
+                        this.setColor(idx, { red: .5, green: 0.5, blue: 0.5 });
                     } else {
                         this.setColor(idx,
                             this.classesDescriptors.byIndex[pt.classIndex]);
@@ -996,11 +997,11 @@ export default class SseEditor3d extends React.Component {
 
     originalCoordinates(idx) {
         const geometry = new THREE.Geometry();
-        let {x, y, z} = this.cloudData[idx];
+        let { x, y, z } = this.cloudData[idx];
         geometry.vertices.push(new THREE.Vector3(x, y, z));
         geometry.rotateZ(this.meta.rotationZ || 0).rotateY(this.meta.rotationY || 0).rotateX(this.meta.rotationX || 0);
         const v = geometry.vertices[0];
-        return {x: v.x, y: v.y, z: v.z};
+        return { x: v.x, y: v.y, z: v.z };
     }
 
     updatePixelProjection(idx) {
@@ -1035,7 +1036,7 @@ export default class SseEditor3d extends React.Component {
             } else {
                 projection.pixelX = projection.pixelY = NaN;
             }
-            return {x: projection.pixelX, y: projection.pixelY};
+            return { x: projection.pixelX, y: projection.pixelY };
         };
 
         if (idx !== undefined)
@@ -1105,7 +1106,7 @@ export default class SseEditor3d extends React.Component {
     }
 
     _raycasting() {
-        if (! this.cloudObject || !this.raycastingIsDirty)
+        if (!this.cloudObject || !this.raycastingIsDirty)
             return;
         this.raycaster.setFromCamera(this.mouse, this.camera);
         const intersects = this.raycaster.intersectObjects([this.cloudObject]);
@@ -1249,7 +1250,7 @@ export default class SseEditor3d extends React.Component {
         this.lastTime = time;
 
         this.updateCamera(time);
-        if (this.orbiting || justZoom){
+        if (this.orbiting || justZoom) {
 
             this.clearCanvasSelection();
             this.clearCanvasMouse();
@@ -1257,7 +1258,7 @@ export default class SseEditor3d extends React.Component {
             if (this.mouse.dragged == 0)
                 this.orbiting = false;
             this.pixelProjectionRequestTime = time;
-        }else {
+        } else {
             if (this.pixelProjectionRequestTime) {
                 if (time - this.pixelProjectionRequestTime > postponingInterval) {
                     this.updatePixelProjection();
@@ -1292,7 +1293,7 @@ export default class SseEditor3d extends React.Component {
     }
 
     resetRotation() {
-        const {rotationX, rotationY, rotationZ} = this.meta;
+        const { rotationX, rotationY, rotationZ } = this.meta;
         this.cloudGeometry.rotateZ(-rotationZ || 0).rotateY(-rotationY || 0).rotateX(-rotationX || 0);
         this.display(undefined, this.positionArray, this.labelArray, this.rgbArray);
         this.meta.rotationX = this.meta.rotationY = this.meta.rotationZ = 0;
@@ -1413,7 +1414,7 @@ export default class SseEditor3d extends React.Component {
         this.positionArray.forEach((v, i) => {
             switch (i % 3) {
                 case 0:
-                    obj = {x: v};
+                    obj = { x: v };
                     break;
                 case 1:
                     obj.y = v;
@@ -1865,7 +1866,7 @@ export default class SseEditor3d extends React.Component {
     }
 
     notifySelectionChange() {
-        this.sendMsg("selection-changed", {selection: this.selection});
+        this.sendMsg("selection-changed", { selection: this.selection });
     }
 
     fitView(forEachableIndices, ev3) {
@@ -1908,18 +1909,18 @@ export default class SseEditor3d extends React.Component {
         return this.pixelProjection.get(o);
     }
 
-    toggleRgbDisplay(){
+    toggleRgbDisplay() {
         // Adapt Our Color
         this.invalidateColor()
-        if(this.displayRgb){
+        if (this.displayRgb) {
             this.displayRgb = false;
-        }else{
+        } else {
             this.displayRgb = true;
         }
     }
 
     display(objectArray, positionArray, labelArray, rgbArray) {
-        return new Promise( (res, rej)=> {
+        return new Promise((res, rej) => {
             this.scene.remove(this.cloudObject);
             const geometry = this.geometry = new THREE.BufferGeometry();
             this.cloudData = [];
@@ -1934,7 +1935,7 @@ export default class SseEditor3d extends React.Component {
             positionArray.forEach((v, i) => {
                 switch (i % 3) {
                     case 0:
-                        obj = {x: v};
+                        obj = { x: v };
                         break;
                     case 1:
                         obj.y = v;
@@ -1946,16 +1947,16 @@ export default class SseEditor3d extends React.Component {
                 }
             });
             const colorArray = [];
-            if(this.displayRgb){
+            if (this.displayRgb) {
                 if (rgbArray) {
                     rgbArray.forEach((v, i) => {
                         //this.cloudData[i].classIndex = v;
                         const rgb = v;
-                        colorArray.push(rgb[0]/255, rgb[1]/255, rgb[2]/255);
+                        colorArray.push(rgb[0] / 255, rgb[1] / 255, rgb[2] / 255);
                     });
                 }
             }
-            else{
+            else {
                 if (labelArray) {
                     labelArray.forEach((v, i) => {
                         this.cloudData[i].classIndex = v;
@@ -1970,7 +1971,7 @@ export default class SseEditor3d extends React.Component {
 
             geometry.computeBoundingSphere();
 
-            const material = new THREE.PointsMaterial({size: 2, vertexColors: THREE.VertexColors});
+            const material = new THREE.PointsMaterial({ size: 2, vertexColors: THREE.VertexColors });
             material.sizeAttenuation = false;
 
             // build mesh
@@ -2007,14 +2008,14 @@ export default class SseEditor3d extends React.Component {
     }
 
     loadPCDFile(fileUrl) {
-        setTimeout(()=>
-        this.sendMsg("bottom-right-label", {message: "Loading PCD data..."}), 1);
-        const loader = new THREE.PCDLoader();
+        setTimeout(() =>
+            this.sendMsg("bottom-right-label", { message: "Loading PCD data..." }), 1);
+        const loader = new THREE.PCDLoader(); // 这个Loader 已经经过重写了
         return new Promise((res) => {
             loader.load(fileUrl, (arg) => {
 
                 this.display(arg.object, arg.position, arg.label, arg.rgb);
-                Object.assign(this.meta, {header: arg.header});
+                Object.assign(this.meta, { header: arg.header });
                 res();
             });
         });
@@ -2039,7 +2040,7 @@ export default class SseEditor3d extends React.Component {
         Meteor.call("saveData", this.meta);
     }
 
-    initDone(){
+    initDone() {
         this.setupTools();
         this.setupLight();
         this.animate();
@@ -2047,30 +2048,30 @@ export default class SseEditor3d extends React.Component {
         setTimeout(this.resizeCanvas.bind(this), 100); // Global layout can take some time...
 
         $("#waiting").addClass("display-none");
-        if (this.rgbArray.length > 0){
+        if (this.rgbArray.length > 0) {
             this.sendMsg("show-rgb-toggle");
         }
     }
 
     start() {
-        const serverMeta = SseSamples.findOne({url: this.props.imageUrl});
-        this.meta = serverMeta || {url: this.props.imageUrl};
+        const serverMeta = SseSamples.findOne({ url: this.props.imageUrl });
+        this.meta = serverMeta || { url: this.props.imageUrl };
         if (serverMeta) {
             this.meta.socName = serverMeta.socName;
-            this.sendMsg("active-soc-name", {value: this.meta.socName});
+            this.sendMsg("active-soc-name", { value: this.meta.socName });
         } else {
             this.meta.socName = this.activeSoc.name;
         }
 
-        this.sendMsg("currentSample", {data: this.meta});
+        this.sendMsg("currentSample", { data: this.meta });
         const fileUrl = SseGlobals.getFileUrl(this.props.imageUrl);
 
         this.loadPCDFile(fileUrl).then(() => {
             this.rotateGeometry(this.meta.rotationX, this.meta.rotationY, this.meta.rotationZ);
-            this.sendMsg("bottom-right-label", {message: "Loading labels..."});
+            this.sendMsg("bottom-right-label", { message: "Loading labels..." });
             this.dataManager.loadBinaryFile(this.props.imageUrl + ".labels")
                 .then(result => {
-                    this.sendMsg("bottom-right-label", {message: "Loading objects..."});
+                    this.sendMsg("bottom-right-label", { message: "Loading objects..." });
                     this.labelArray = result;
                     this.maxClassIndex = 0;
                     for (var i = 0; i < this.labelArray.length; i++) {
@@ -2078,20 +2079,20 @@ export default class SseEditor3d extends React.Component {
                             this.maxClassIndex = this.labelArray[i];
                         }
                     }
-                    this.sendMsg("maximum-classIndex", {value: this.maxClassIndex});
+                    this.sendMsg("maximum-classIndex", { value: this.maxClassIndex });
                 }, () => {
                     this.saveBinaryLabels();
                 }).then(() => {
-                this.dataManager.loadBinaryFile(this.props.imageUrl + ".objects").then(result => {
-                    if (!result.forEach)
-                        result = undefined;
-                    this.display(result, this.positionArray, this.labelArray, this.rgbArray).then( ()=>{
+                    this.dataManager.loadBinaryFile(this.props.imageUrl + ".objects").then(result => {
+                        if (!result.forEach)
+                            result = undefined;
+                        this.display(result, this.positionArray, this.labelArray, this.rgbArray).then(() => {
+                            this.initDone();
+                        });
+                    }, () => {
                         this.initDone();
                     });
-                }, () => {
-                    this.initDone();
                 });
-            });
         });
     }
 }
