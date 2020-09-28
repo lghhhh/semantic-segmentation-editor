@@ -114,7 +114,7 @@ export default class SseDataManager {
             oReq.setRequestHeader("Content-Type", "application/octet-stream");
             oReq.send(binary);
         });
-        worker.postMessage({operation: "compress", data});
+        worker.postMessage({ operation: "compress", data });
     }
 
     loadBinaryFile(fileName) {
@@ -139,12 +139,12 @@ export default class SseDataManager {
                                 rej()
                         }
                     });
-                    worker.postMessage({operation: "uncompress", data: oReq.response});
+                    worker.postMessage({ operation: "uncompress", data: oReq.response });
                 }
             };
             oReq.send("nothing");
         });
-        prom.then(() => worker.terminate(), ()=>(0/* Silent catch */));
+        prom.then(() => worker.terminate(), () => (0/* Silent catch */));
         return prom;
     }
 }

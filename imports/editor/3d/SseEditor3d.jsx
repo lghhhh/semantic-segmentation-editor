@@ -120,7 +120,7 @@ export default class SseEditor3d extends React.Component {
 
     render() {
         return (<div className="absoluteTopLeftZeroW100H100">
-            <canvas className="editor-3d-2d"></canvas>
+            <canvas id="canvas3dPreview" className="editor-3d-2d"></canvas>
             <canvas id="canvas3d" className="absoluteTopLeftZeroW100H100">
             </canvas>
             <canvas id="canvasSelection" className="absoluteTopLeftZeroW100H100"></canvas>
@@ -432,7 +432,7 @@ export default class SseEditor3d extends React.Component {
         this.onMsg("view-right", () => this.cameraPreset("right"));
         this.onMsg("view-center", () => this.centerView());
 
-
+        //-------------------------------给总线发送信号------------------------------------
         this.sendMsg("editor-ready");
 
         this.onMsg("autoFilter", ({ value }) => {
@@ -521,6 +521,7 @@ export default class SseEditor3d extends React.Component {
             return "(" + s(this.x) + ", " + s(this.y) + ", " + s(this.z) + ")";
         };
         */
+        this.initPreviewImg();
         this.canvas3d = $("#canvas3d").get(0);
         this.canvasSelection = $("#canvasSelection").get(0);
         this.contextSelection = this.canvasSelection.getContext("2d");
@@ -532,6 +533,8 @@ export default class SseEditor3d extends React.Component {
         this.visibleIndices = new Set();
         this.grayIndices = new Set();
         this.frustrumIndices = new Set();
+
+
         const scene = this.scene = new THREE.Scene();
 
         scene.background = new THREE.Color(0x111111);
@@ -547,7 +550,7 @@ export default class SseEditor3d extends React.Component {
         };
 
         const renderer = this.renderer = new THREE.WebGLRenderer(rendererAttrs);
-        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.setPixelRatio(window.devicePixelRatio);  // 设置像素比  避免绘图模糊
         $(renderer.domElement).addClass("absoluteTopLeftZeroW100H100");
 
 
@@ -561,26 +564,48 @@ export default class SseEditor3d extends React.Component {
 
         this.mouse = new THREE.Vector2();
         this.mouse.dragged = 0;
-        this.setupAxes();
+        this.setupAxes(); // 简单模拟三轴对象 红:X轴 、绿：Y轴、蓝：Z轴
 
-        this.camera.up.set(0, -1, 0);
+        this.camera.up.set(0, -1, 0); // 在OrbitControl.js  使用到 用于四元数旋转参数
 
         this.orbiter = new THREE.OrbitControls(this, this.camera, this.canvasContainer, this);
 
         // setting up OrbitControls, see the official doc for more details
         // https://threejs.org/docs/#examples/en/controls/OrbitControls
 
-        // enable panning and keyboard controls
+        // enable panning and keyboard controls  启用 摄像后平移、键盘控制
         this.orbiter.enablePan = true;
         this.orbiter.enableKeys = true;
-        // set pan button to null, default is RMB, but that's used for labeling
+        // set pan button to null, default is RMB, but that's used for labeling  左键旋转  中键缩放 平移 空
         this.orbiter.mouseButtons = { ORBIT: THREE.MOUSE.LEFT, ZOOM: THREE.MOUSE.MIDDLE, PAN: null };
 
         this.orbiter.addEventListener("start", this.orbiterStart.bind(this), false);
         this.orbiter.addEventListener("change", this.orbiterChange.bind(this), false);
         this.orbiter.addEventListener("end", this.orbiterEnd.bind(this), false);
 
-        this.frustum = new THREE.Frustum();
+        this.frustum = new THREE.Frustum(); //将摄像头椎体外的物体排除渲染
+    }
+    //初始化2d预览图形
+    initPreviewImg() {
+        this.canvas3dPreview = $("#canvas3dPreview").get(0)
+        let ctx = canvas3dPreview.getContext("2d");
+        let imgURL = SseGlobals.getFileUrl((this.props.imageUrl).replace(".pcd", ".jpg"))
+        let imageObj = new Image();
+        canvas3dPreview.width = 480;
+        canvas3dPreview.height = 270;
+
+        imageObj.onload = function (d) {
+
+            let width = 480;
+            let height = 480 * imageObj.height / imageObj.width;
+            // ctx.width = width;
+            // ctx.height = height;
+            // let width = imageObj.width;
+            // let height = imageObj.height;
+            ctx.drawImage(imageObj, 0, 0, imageObj.width, imageObj.height, 0, 0, width, height);
+        };
+        // imageObj.src = 'http://www.html5canvastutorials.com/demos/assets/darth-vader.jpg';
+        imageObj.src = imgURL;
     }
 
     grayIndex(idx) {
@@ -1921,6 +1946,7 @@ export default class SseEditor3d extends React.Component {
 
     display(objectArray, positionArray, labelArray, rgbArray) {
         return new Promise((res, rej) => {
+            debugger
             this.scene.remove(this.cloudObject);
             const geometry = this.geometry = new THREE.BufferGeometry();
             this.cloudData = [];
@@ -2041,9 +2067,12 @@ export default class SseEditor3d extends React.Component {
     }
 
     initDone() {
+        debugger
         this.setupTools();
         this.setupLight();
+        // 绘制相关初始化
         this.animate();
+        // 3d模型 旋转 缩放初始化
         this.orbiter.activate();
         setTimeout(this.resizeCanvas.bind(this), 100); // Global layout can take some time...
 
@@ -2068,7 +2097,8 @@ export default class SseEditor3d extends React.Component {
 
         this.loadPCDFile(fileUrl).then(() => {
             this.rotateGeometry(this.meta.rotationX, this.meta.rotationY, this.meta.rotationZ);
-            this.sendMsg("bottom-right-label", { message: "Loading labels..." });
+            this.sendMsg("bottom-right-label", { message: "Loading labels..." }); // 发送消息 <seeText> 收到就显示
+            // 加载数据 如有有就
             this.dataManager.loadBinaryFile(this.props.imageUrl + ".labels")
                 .then(result => {
                     this.sendMsg("bottom-right-label", { message: "Loading objects..." });
@@ -2082,11 +2112,13 @@ export default class SseEditor3d extends React.Component {
                     this.sendMsg("maximum-classIndex", { value: this.maxClassIndex });
                 }, () => {
                     this.saveBinaryLabels();
-                }).then(() => {
+                })
+                .then(() => {
                     this.dataManager.loadBinaryFile(this.props.imageUrl + ".objects").then(result => {
                         if (!result.forEach)
                             result = undefined;
                         this.display(result, this.positionArray, this.labelArray, this.rgbArray).then(() => {
+
                             this.initDone();
                         });
                     }, () => {

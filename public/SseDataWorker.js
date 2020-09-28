@@ -118,6 +118,7 @@ LZW = {
             w = "",
             result = [],
             dictSize = 256;
+        //生成utf-16的字符key-value
         for (i = 0; i < 256; i += 1) {
             dictionary[String.fromCharCode(i)] = i;
         }
@@ -128,11 +129,12 @@ LZW = {
             //Do not use dictionary[wc] because javascript arrays
             //will return values for array['pop'], array['push'] etc
             // if (dictionary[wc]) {
-            if (dictionary.hasOwnProperty(wc)) {
+            if (dictionary.hasOwnProperty(wc)) {// 找到最长在字典中存在地字符串
                 w = wc;
             } else {
+                //将前一个字典中存在的字符对应的编码加入result
                 result.push(dictionary[w]);
-                // Add wc to the dictionary.
+                // Add wc to the dictionary. 将这个不存在的编码存入字典中
                 dictionary[wc] = dictSize++;
                 w = String(c);
             }
@@ -156,17 +158,18 @@ LZW = {
             k,
             entry = "",
             dictSize = 256;
+        // 生成256 个 Unicode 值 对应编码
         for (i = 0; i < 256; i += 1) {
             dictionary[i] = String.fromCharCode(i);
         }
 
         w = String.fromCharCode(compressed[0]);
         result = w;
-        const step = Math.round(compressed.length / 100);
+        const step = Math.round(compressed.length / 100); //总长度切割 通知处理里进度
         for (i = 1; i < compressed.length; i += 1) {
             if ((i % step) == 0) {
                 const value = Math.round(100 * i / compressed.length);
-                self.postMessage({operation: "progress", value});
+                self.postMessage({ operation: "progress", value }); // 每次处理1% 向主线程通知
             }
             k = compressed[i];
             if (dictionary[k]) {
@@ -207,12 +210,12 @@ function bytesToObject(bytes) {
 }
 
 self.addEventListener("message", (msg) => {
-    const {operation, data} = msg.data;
+    const { operation, data } = msg.data;
     let result;
     if (operation == "compress") {
         result = objectToBytes(data);
     } else if (operation == "uncompress") {
         result = bytesToObject(data);
     }
-    self.postMessage({operation, result: result});
+    self.postMessage({ operation, result: result });
 });

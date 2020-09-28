@@ -1,7 +1,7 @@
 import React from 'react';
-import {CardText, CardTitle} from '@material-ui/core';
-import {withStyles} from '@material-ui/core/styles';
-import {Approval} from "mdi-material-ui";
+import { CardText, CardTitle } from '@material-ui/core';
+import { withStyles } from '@material-ui/core/styles';
+import { Approval } from "mdi-material-ui";
 import SseGlobals from "../common/SseGlobals";
 
 class SseImageThumbnail extends React.Component {
@@ -12,19 +12,21 @@ class SseImageThumbnail extends React.Component {
     render() {
         const image = this.props.image;
         let name = image.name;
+        let imgURL = image.url.endsWith(".pcd") ? SseGlobals.getFileUrl((image.url.replace(".pcd", ".jpg")) + "?size=small") : SseGlobals.getFileUrl(image.url + "?size=small")
         if (!name) {
             const durl = decodeURIComponent(image.url);
             name = durl.substring(1 + durl.lastIndexOf("/"));
         }
-        const {classes} = this.props;
+        const { classes } = this.props;
         return (
             <div className="sse-thumbnail vflex flex-align-items-center">
-                <img
-                    src={image.url.endsWith(".pcd") ? "/pcl_horz_large_neg.png" : SseGlobals.getFileUrl(image.url + "?size=small")}/>
+                {/* <img
+                    src={image.url.endsWith(".pcd") ? "/pcl_horz_large_neg.png" : SseGlobals.getFileUrl(image.url + "?size=small")}/> */}
+                <img src={imgURL} />
                 <div className="w100 text-align-center text-crop">{name}</div>
                 <div>
                     {this.props.annotated
-                        ? <Approval/>
+                        ? <Approval />
                         : null}
                 </div>
 
