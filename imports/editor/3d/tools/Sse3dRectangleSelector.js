@@ -12,6 +12,7 @@ export default class extends Sse3dSelector {
 
     mouseUp(ev) {
         if (ev.which == 3) {
+            // scene 是Sse3dSelector类初始化是传入的this
             this.scene.selectByPolygon(this.polygon);
             this.polygon.length = 0;
             this.startX = this.startY = NaN;

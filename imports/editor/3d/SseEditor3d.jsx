@@ -8,7 +8,7 @@ import SsePCDLoader from "./SsePCDLoader";
 import OrbitControls from "./tools/OrbitControls"
 import Sse3dLassoSelector from "./tools/Sse3dLassoSelector";
 import PointInPoly from "point-in-polygon-extended";
-import TWEEN from "@tweenjs/tween.js";
+import TWEEN from "@tweenjs/tween.js"; // 补间动画库
 import Sse3dRectangleSelector from "./tools/Sse3dRectangleSelector";
 import Sse3dCircleSelector from "./tools/Sse3dCircleSelector";
 import SseDataManager from "../../common/SseDataManager";
@@ -523,8 +523,10 @@ export default class SseEditor3d extends React.Component {
         */
         this.initPreviewImg();
         this.canvas3d = $("#canvas3d").get(0);
+        // 分层显示划线线条
         this.canvasSelection = $("#canvasSelection").get(0);
         this.contextSelection = this.canvasSelection.getContext("2d");
+
         this.canvasMouse = $("#canvasMouse").get(0);
         this.contextMouse = this.canvasMouse.getContext("2d");
         this.canvasContainer = $('#canvasContainer').get(0);
@@ -1074,19 +1076,26 @@ export default class SseEditor3d extends React.Component {
     }
 
     resizeCanvas() {
-        const box = this.canvasContainer.getBoundingClientRect();
+
+        const box = this.canvasContainer.getBoundingClientRect();  //方法返回元素的大小及其相对于视口的位置
+        // 展示框的大小
         this.viewWidth = box.width;
         this.viewHeight = box.height;
+        // 展示框中心位置
         this.viewWidth2 = box.width / 2;
         this.viewHeight2 = box.height / 2;
+
         this.clippingBox = [-2, -2, this.viewWidth + 4, this.viewHeight + 4];
+
         const d = this.renderer.domElement.ownerDocument.documentElement;
+        //用于 后面mouseMove 计算时候  鼠标在 点云显示数据的 左边位置
         this.screen = {};
-        this.screen.left = box.left + window.pageXOffset - d.clientLeft;
+        this.screen.left = box.left + window.pageXOffset - d.clientLeft; //pageXOffset 其实scrollx 
         this.screen.top = box.top + window.pageYOffset - d.clientTop;
         this.screen.width = box.width;
         this.screen.height = box.height;
-        this.camera.aspect = this.viewWidth / this.viewHeight;
+
+        this.camera.aspect = this.viewWidth / this.viewHeight; //  修改摄像机视锥体长宽比
         this.camera.updateProjectionMatrix();
         this.renderer.setSize(this.viewWidth, this.viewHeight);
         this.canvasSelection.width = this.viewWidth;
@@ -1267,6 +1276,7 @@ export default class SseEditor3d extends React.Component {
     }
 
     animate(time) {
+        // react 生命周期 componentWillUnmount 注销了sseMsg 取消了订阅就会停止刷新
         if (this.sendMsg)
             requestAnimationFrame(this.animate.bind(this));
         else return;
@@ -1275,7 +1285,7 @@ export default class SseEditor3d extends React.Component {
         this.lastTime = time;
 
         this.updateCamera(time);
-        if (this.orbiting || justZoom) {
+        if (this.orbiting || justZoom) { // orbiting 改变相机中心点、设置相机默认的视角方向、 过滤纸聚焦一个对象 都会修改orbiting 为true
 
             this.clearCanvasSelection();
             this.clearCanvasMouse();
@@ -1689,9 +1699,11 @@ export default class SseEditor3d extends React.Component {
     }
 
     setupTools() {
+        // 三个选择器都是 ./tools/Sse3dSelector 派生的子类 在界面上 画的点 存储到 this.polygon 数组中
         this.selector = new Sse3dLassoSelector(this);
         this.rectangleSelector = new Sse3dRectangleSelector(this);
         this.circleSelector = new Sse3dCircleSelector(this);
+
         this.canvasContainer.addEventListener("mousedown", this.mouseDown.bind(this), false);
         this.canvasContainer.addEventListener("mousemove", this.mouseMove.bind(this), false);
         this.canvasContainer.addEventListener("mouseup", this.mouseUp.bind(this), false);
@@ -1766,12 +1778,14 @@ export default class SseEditor3d extends React.Component {
     }
 
     mouseDown(ev) {
+        debugger
+        // button  0：鼠标左键 1：鼠标滚轮 2：鼠标右键
         if (ev.button == 1 || this.ctrlDown) {
             this.changeTarget(ev);
         } else {
             this.cameraTween.stop();
-            this.mouse.down = ev.which;
-            this.mouse.downX = ev.pageX;
+            this.mouse.down = ev.which; // 显示那个鼠标按键给按下 0: 无 1: 左键 2: 中间滚轮（如果有的话） 3: 右键
+            this.mouse.downX = ev.pageX; //鼠标指针相对于整个文档的X坐标；
             this.mouse.downY = ev.pageY;
             this.cameraPresetInfo = undefined;
             if (this.currentTool.mouseDown)
@@ -1781,6 +1795,7 @@ export default class SseEditor3d extends React.Component {
     }
 
     mouseUp(ev) {
+        debugger
         this.mouse.down = 0;
         if (this.currentTool.mouseUp)
             this.currentTool.mouseUp.bind(this.currentTool)(ev);
@@ -1847,6 +1862,7 @@ export default class SseEditor3d extends React.Component {
     }
 
     mouseMove(iev) {
+
         // Workaround for FF: ev.which and mouseDown.ev.which are different, not on Chrome
         const ev = {
             offsetX: iev.offsetX,
@@ -1855,20 +1871,21 @@ export default class SseEditor3d extends React.Component {
             pageY: iev.pageY,
             which: this.mouse.down
         };
-
+        // (鼠标位置相对整个文档X左边 - 点云可视区域相对左边的长度)  计算出 x位置 在总长的百分比  不知道干嘛用 忽略
         this.mouse.x = ((ev.pageX - this.screen.left) / this.screen.width) * 2 - 1;
         this.mouse.y = -((ev.pageY - this.screen.top) / this.screen.height) * 2 + 1;
 
         if (this.currentTool.mouseMove)
             this.currentTool.mouseMove.bind(this.currentTool)(ev);
 
-        if (this.mouse.down)
+        if (this.mouse.down) // 显示那个鼠标按键给按下 0: 无 1: 左键 2: 中间滚轮（如果有的话） 3: 右键
             this.mouseDrag(ev);
         this.invalidateRaycasting();
         this.sendMsg("mouse-move", ev);
     }
 
     mouseDrag(ev) {
+        // 当前的选择器存在 方法的话 调用选择器的方法 将鼠标的点记录到 polygon 变量中
         if (this.currentTool.mouseDrag)
             this.currentTool.mouseDrag.bind(this.currentTool)(ev);
         this.mouse.dragged++;
@@ -1946,7 +1963,6 @@ export default class SseEditor3d extends React.Component {
 
     display(objectArray, positionArray, labelArray, rgbArray) {
         return new Promise((res, rej) => {
-            debugger
             this.scene.remove(this.cloudObject);
             const geometry = this.geometry = new THREE.BufferGeometry();
             this.cloudData = [];
@@ -2067,10 +2083,9 @@ export default class SseEditor3d extends React.Component {
     }
 
     initDone() {
-        debugger
         this.setupTools();
         this.setupLight();
-        // 绘制相关初始化
+        // 内含 图像绘制 three render渲染刷新
         this.animate();
         // 3d模型 旋转 缩放初始化
         this.orbiter.activate();
