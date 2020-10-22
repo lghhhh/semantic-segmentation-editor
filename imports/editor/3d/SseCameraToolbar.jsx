@@ -22,6 +22,7 @@ export default class SseCameraToolbar extends SseToolbar {
 
     componentDidMount() {
         super.componentDidMount();
+        // 参数 ：name, title, isToggle, shortcut, actionMessage, icon, initialState, legend
         this.addCommand("viewCameraCommand", "Camera View", false, "C", "view-camera", Video, undefined, undefined);
         this.addCommand("viewFrontCommand", "Front View", false, "F", "view-front", ArrowCollapseUp, undefined, undefined);
         this.addCommand("viewBehindCommand", "Behind View", false, "B", "view-behind", ArrowCollapseDown, undefined, undefined);
@@ -36,30 +37,30 @@ export default class SseCameraToolbar extends SseToolbar {
         this.addCommand("distanceAttenuationCommand", "Distance Attenuation", Blur, "", "distance-attenuation", BlurOff, undefined, undefined);
         this.addCommand("rgbCommand", "Toggle RGB", LightbulbOn, "+", "rgb-toggle", Lightbulb, undefined, undefined);
 
-        this.setState({ready: true});
+        this.setState({ ready: true });
 
-        this.onMsg("show-rgb-toggle", ()=>{
-            this.setState({showRgbToggle: true})
+        this.onMsg("show-rgb-toggle", () => {
+            this.setState({ showRgbToggle: true })
         });
         this.onMsg("color-boost-toggle", () => {
             if (this.state.colorBoostVisible == "none") {
                 this.onMsg("mouse-down", () => {
-                    this.setState({colorBoostVisible: "none"});
+                    this.setState({ colorBoostVisible: "none" });
                     this.forgetMsg("mouse-down");
                 })
             }
-            this.setState({pointSizeVisible: "none"});
-            this.setState({colorBoostVisible: this.state.colorBoostVisible == "none" ? "" : "none"});
+            this.setState({ pointSizeVisible: "none" });
+            this.setState({ colorBoostVisible: this.state.colorBoostVisible == "none" ? "" : "none" });
         });
         this.onMsg("point-size-toggle", () => {
             if (this.state.pointSizeVisible == "none") {
                 this.onMsg("mouse-down", () => {
-                    this.setState({pointSizeVisible: "none"});
+                    this.setState({ pointSizeVisible: "none" });
                     this.forgetMsg("mouse-down");
                 })
             }
-            this.setState({colorBoostVisible: "none"});
-            this.setState({pointSizeVisible: this.state.pointSizeVisible == "none" ? "" : "none"});
+            this.setState({ colorBoostVisible: "none" });
+            this.setState({ pointSizeVisible: this.state.pointSizeVisible == "none" ? "" : "none" });
         });
     }
 
@@ -68,8 +69,8 @@ export default class SseCameraToolbar extends SseToolbar {
             this.state.data[filterName] = value;
             const obj = {};
             obj[filterName] = value;
-            this.setState({data: obj});
-            this.sendMsg(dataMsg, {value});
+            this.setState({ data: obj });
+            this.sendMsg(dataMsg, { value });
         }
     }
 
@@ -78,15 +79,15 @@ export default class SseCameraToolbar extends SseToolbar {
         if (!this.state.ready)
             return null;
         const colorBoostSliderStyle =
-            {
-                display: this.state.colorBoostVisible,
-                height: "150px",
-                position: "absolute",
-                left: "-30px",
-                top: "-110px"
-            };
+        {
+            display: this.state.colorBoostVisible,
+            height: "150px",
+            position: "absolute",
+            left: "-30px",
+            top: "-110px"
+        };
         const pointSizeSliderStyle =
-            {display: this.state.pointSizeVisible, height: "150px", position: "absolute", left: "-30px", top: "-110px"};
+            { display: this.state.pointSizeVisible, height: "150px", position: "absolute", left: "-30px", top: "-110px" };
 
         return (
             <div className="vflex flex-justify-content-space-around sse-toolbar no-shrink">

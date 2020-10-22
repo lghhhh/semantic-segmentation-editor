@@ -1,6 +1,6 @@
 import React from 'react';
 
-import {Button, Checkbox, FormControlLabel, FormGroup, IconButton} from '@material-ui/core';
+import { Button, Checkbox, FormControlLabel, FormGroup, IconButton } from '@material-ui/core';
 import Mousetrap from "mousetrap";
 import SseMsg from "./SseMsg";
 
@@ -37,8 +37,8 @@ export default class SseToolbar extends React.Component {
             return (<div
                 className={"sse-command vflex flex-align-items-center " + (this.state[name])} title={commandDesc.title}
                 data-tippy-html={$(tippyKey).length ? tippyKey : ""}>
-                <IconButton onClick={e => this.sendMsg(commandDesc.actionMessage, {value: this.state[name]})}>
-                    <Icon/>
+                <IconButton onClick={e => this.sendMsg(commandDesc.actionMessage, { value: this.state[name] })}>
+                    <Icon />
                 </IconButton>
                 <span className="title">{commandDesc.legend || commandDesc.shortcut}</span>
             </div>);
@@ -60,12 +60,12 @@ export default class SseToolbar extends React.Component {
                 <div className="hflex flex-align-items-center">
                     {commandDesc.legend ?
                         <Button onClick={e => this.sendMsg(commandDesc.actionMessage)}>
-                            <Icon/>
+                            <Icon />
                             <span>{commandDesc.legend}</span>
                         </Button>
                         :
                         <IconButton onClick={e => this.sendMsg(commandDesc.actionMessage)}>
-                            <Icon/>
+                            <Icon />
                             <span>{commandDesc.legend}</span>
                         </IconButton>
                     }
@@ -91,16 +91,16 @@ export default class SseToolbar extends React.Component {
             <FormControlLabel control={<Checkbox
                 checked={this.state[name + "Check"]}
                 id={commandDesc.name}
-                style={{height: "24px"}}
-                onChange={(ev) => this.handleCheckbox(commandDesc.name)}/>}
-                              label={commandDesc.title + (commandDesc.shortcut ? ' (' + commandDesc.shortcut + ")" : "")}
+                style={{ height: "24px" }}
+                onChange={(ev) => this.handleCheckbox(commandDesc.name)} />}
+                label={commandDesc.title + (commandDesc.shortcut ? ' (' + commandDesc.shortcut + ")" : "")}
             /></FormGroup>;
     }
 
     handleCheckbox(commandName) {
         const commandDesc = this.commands.get(commandName);
         const cb = $("#" + commandName).get(0);
-        this.sendMsg(commandDesc.actionMessage.replace("-checkbox", ""), {value: cb.checked});
+        this.sendMsg(commandDesc.actionMessage.replace("-checkbox", ""), { value: cb.checked });
 
         const key = commandName + "Check";
         this.state[key] = !this.state[key];
@@ -119,7 +119,7 @@ export default class SseToolbar extends React.Component {
     }
 
     addCommand(name, title, isToggle, shortcut, actionMessage, icon, initialState, legend) {
-        const command = {name, title, isToggle, shortcut, actionMessage, icon, legend};
+        const command = { name, title, isToggle, shortcut, actionMessage, icon, legend };
         this.commands.set(name, command);
         if (isToggle) {
             if (typeof isToggle == "boolean")
@@ -168,7 +168,7 @@ export default class SseToolbar extends React.Component {
             this.messages();
     }
 
-    componentWillUnmount(){
+    componentWillUnmount() {
         SseMsg.unregister(this);
     }
 

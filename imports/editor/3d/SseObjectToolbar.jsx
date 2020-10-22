@@ -1,6 +1,6 @@
 import React from 'react';
 
-import {Close, Delete, MinusCircleOutline, Plus, PlusCircleOutline, Target} from 'mdi-material-ui';
+import { Close, Delete, MinusCircleOutline, Plus, PlusCircleOutline, Target } from 'mdi-material-ui';
 import SseToolbar from "../../common/SseToolbar";
 import SseGlobals from "../../common/SseGlobals";
 import SseMsg from "../../common/SseMsg";
@@ -12,17 +12,17 @@ class SseObjectButton extends React.Component {
     constructor() {
         super();
         SseMsg.register(this);
-        this.state = {selected: false};
+        this.state = { selected: false };
     }
 
     componentDidMount() {
         this.onMsg("object-select", (arg) => {
             const selected = arg.value == this.props.object;
-            this.setState({selected});
+            this.setState({ selected });
         });
     }
 
-    componentWillUnmount(){
+    componentWillUnmount() {
         SseMsg.unregister(this);
     }
 
@@ -42,7 +42,7 @@ class SseObjectButton extends React.Component {
     }
 
     onClick() {
-        this.sendMsg("object-select", {value: this.props.object});
+        this.sendMsg("object-select", { value: this.props.object });
     }
 
     render() {
@@ -69,18 +69,20 @@ class SseObjectButton extends React.Component {
 export default class SseObjectToolbar extends SseToolbar {
     constructor() {
         super();
-        this.state = {objects: [], newButtonVisible: false};
+        this.state = { objects: [], newButtonVisible: false };
     }
 
     componentDidMount() {
         super.componentDidMount();
+        // addCommand 方法是ssetoolbar中的公共方法 可以将一些信息添加到一个map 中 后面可以调用 renderXXX方法渲染出一个小组件
+        // 参数：(name, title, isToggle, shortcut, actionMessage, icon, initialState, legend)
         this.addCommand("newObjectCommand", "New Object", false, "Create new object", "object-new", Plus, undefined, "Create Object");
         this.addCommand("deleteObjectCommand", "Delete Object", false, ",", "object-delete", Delete, undefined, "Delete Object");
         this.addCommand("addPointsObjectCommand", "Add Points", false, "", "object-add-points", PlusCircleOutline, "undefined", "Add Points");
         this.addCommand("removePointsObjectCommand", "Remove Points", false, "", "object-remove-points", MinusCircleOutline, "undefined", "Remove Points");
         this.addCommand("unselectObjectCommand", "Unselect Object", false, "", "object-unselect", Close, undefined, undefined);
         this.addCommand("focusObjectCommand", "Focus Object", false, "", "object-focus", Target, undefined, "Focus Object");
-        this.setState({ready: true});
+        this.setState({ ready: true });
         this.retriggerMsg("active-soc");
     }
 
@@ -95,7 +97,7 @@ export default class SseObjectToolbar extends SseToolbar {
             const selectionArray = Array.from(this.selection);
             const removeButtonVisible = selectionArray.find(idx => objPoints.has(idx)) != undefined;
             const addButtonVisible = selectionArray.find(idx => !objPoints.has(idx)) != undefined;
-            this.setState({removeButtonVisible, addButtonVisible});
+            this.setState({ removeButtonVisible, addButtonVisible });
         } else {
             this.setState({
                 removeButtonVisible: false,
@@ -108,17 +110,17 @@ export default class SseObjectToolbar extends SseToolbar {
     messages() {
         this.onMsg("objects-update", (arg) => {
             const objects = arg.value;
-            this.setState({objects});
+            this.setState({ objects });
         });
 
         this.onMsg("object-select", (arg) => {
-            this.setState({objectSelected: arg.value, pointCount: arg.value ? arg.value.points.length : 0});
+            this.setState({ objectSelected: arg.value, pointCount: arg.value ? arg.value.points.length : 0 });
             this.selectedObject = arg.value;
             this.updateState();
         });
 
         this.onMsg("active-soc", arg => {
-            this.setState({soc: arg.value});
+            this.setState({ soc: arg.value });
         });
 
         this.onMsg("selection-changed", (arg) => {
@@ -129,7 +131,7 @@ export default class SseObjectToolbar extends SseToolbar {
         });
 
         this.onMsg("update-object-stat", (arg) => {
-            this.setState({pointCount: this.state.objectSelected.points.length})
+            this.setState({ pointCount: this.state.objectSelected.points.length })
         });
 
 
@@ -192,11 +194,11 @@ export default class SseObjectToolbar extends SseToolbar {
                         : this.renderEmpty()}
                 </div>
                 <div className="object-list scroller group vflex grow wrap"
-                     onWheel={ev => this.wheelScrolling(ev)}>
+                    onWheel={ev => this.wheelScrolling(ev)}>
                     {Array.from(this.state.objects).map((o, idx) => (
                         <SseObjectButton key={"_" + idx}
-                                         soc={this.state.soc}
-                                         object={o}/>))}
+                            soc={this.state.soc}
+                            object={o} />))}
                 </div>
             </div>
 

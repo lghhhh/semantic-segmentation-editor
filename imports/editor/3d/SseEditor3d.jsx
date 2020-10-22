@@ -7,7 +7,7 @@ import SseGlobals from "../../common/SseGlobals";
 import SsePCDLoader from "./SsePCDLoader";
 import OrbitControls from "./tools/OrbitControls"
 import Sse3dLassoSelector from "./tools/Sse3dLassoSelector";
-import PointInPoly from "point-in-polygon-extended";
+import PointInPoly from "point-in-polygon-extended";// 判断点是否在框框内
 import TWEEN from "@tweenjs/tween.js"; // 补间动画库
 import Sse3dRectangleSelector from "./tools/Sse3dRectangleSelector";
 import Sse3dCircleSelector from "./tools/Sse3dCircleSelector";
@@ -18,6 +18,8 @@ import PolyBool from "polybooljs";
 import lineclip from "lineclip";
 import SseMsg from "../../common/SseMsg";
 import $ from "jquery";
+// import { project2d } from "./tools/ProjectionTo2D"
+import ImageProjection from "./tools/ProjectionTo2DImg"
 
 const PI = Math.PI;
 const DOUBLEPI = PI * 2;
@@ -33,13 +35,15 @@ export default class SseEditor3d extends React.Component {
         new SsePCDLoader(THREE);
         new OrbitControls(THREE);
 
+        this.imgProjectionController = new ImageProjection()
+
         this.autoFilterMode = false;
         this.globalBoxMode = true;
         this.selectionOutlineMode = true;
         this.selectionMode = "add";
         this.autoFocusMode = false;
         this.colorBoost = 0;
-        this.orientationArrows = new Map();
+        this.orientationArrows = new Map(); // 重置点云方向的箭头
         this.state = { ready: false };
         this.screen = {};
         this.colorCache = new Map();
@@ -51,6 +55,8 @@ export default class SseEditor3d extends React.Component {
         this.pixelProjection = new Map();
         this.highlightedIndex = undefined;
         this.dataManager = new SseDataManager();
+        this.pointCloudsOriginalData = null; //点云原始数据 未旋转、 用于投影2d图像
+
 
         this.tweenDuration = 500;
 
@@ -120,9 +126,12 @@ export default class SseEditor3d extends React.Component {
 
     render() {
         return (<div className="absoluteTopLeftZeroW100H100">
+            {/* 2d图像 */}
             <canvas id="canvas3dPreview" className="editor-3d-2d"></canvas>
-            <canvas id="canvas3d" className="absoluteTopLeftZeroW100H100">
-            </canvas>
+            <canvas id="canvas3dPreviewImg" className="editor-3d-2d-img"></canvas>
+            <canvas id="canvas3dPreviewSelection" className="editor-3d-2d-img-selection"></canvas>
+            {/* 3D图像 */}
+            <canvas id="canvas3d" className="absoluteTopLeftZeroW100H100"></canvas>
             <canvas id="canvasSelection" className="absoluteTopLeftZeroW100H100"></canvas>
             <canvas id="canvasMouse" className="absoluteTopLeftZeroW100H100"></canvas>
         </div>
@@ -235,6 +244,7 @@ export default class SseEditor3d extends React.Component {
         this.saveAll();
     }
 
+    // 为选定数据集、创建对象
     createObject() {
         let points;
         if (this.selection.size > 0)
@@ -242,16 +252,16 @@ export default class SseEditor3d extends React.Component {
         else if (this.viewFilterState === "points")
             points = this.visibleIndices;
         if (points) {
-
             const obj = { id: Random.id(), classIndex: this.activeClassIndex, points: Array.from(points) };
             this.objects.add(obj);
-
+            let size = this.objects.size - 1 //返回成员个数 隐藏层绘制颜色有这个序号决定
+            this.imgProjectionController.project(obj.id, obj.points, 'rgba(255,0,0,0.7)', size, 'add')
             this.sendMsg("objects-update", { value: this.objects });
             this.sendMsg("object-select", { value: obj });
-            this.changeClassOfSelection(this.activeClassIndex);
-
+            this.changeClassOfSelection(this.activeClassIndex); // 这里的方法会把point 清空？？
         }
         this.saveAll();
+
     }
 
     invalidateCounters() {
@@ -456,6 +466,7 @@ export default class SseEditor3d extends React.Component {
         });
 
         this.onMsg("object-new", () => {
+            // 创建对象是调用
             this.createObject();
         });
 
@@ -590,24 +601,57 @@ export default class SseEditor3d extends React.Component {
     //初始化2d预览图形
     initPreviewImg() {
         this.canvas3dPreview = $("#canvas3dPreview").get(0)
+        this.canvas3dPreviewImg = $("#canvas3dPreviewImg").get(0)
+        this.canvas3dPreviewSelection = $("#canvas3dPreviewSelection").get(0)
+
+
         let ctx = canvas3dPreview.getContext("2d");
+        let ctxImg = canvas3dPreviewImg.getContext("2d");
+        let ctxImgSelection = canvas3dPreviewSelection.getContext("2d");
+
         let imgURL = SseGlobals.getFileUrl((this.props.imageUrl).replace(".pcd", ".jpg"))
         let imageObj = new Image();
-        canvas3dPreview.width = 480;
-        canvas3dPreview.height = 270;
+        canvas3dPreview.width = canvas3dPreviewImg.width = canvas3dPreviewSelection.width = 480;
+        canvas3dPreview.height = canvas3dPreviewImg.height = canvas3dPreviewSelection.height = 270;
 
-        imageObj.onload = function (d) {
+        let extrinsic = [
+            [-0.0317468196153641, -0.999492108821869, 0.00276703014969826, -0.178828567266464],
+            [0.039061676710844, -0.0040070153772831, -0.999228775501251, -0.756422758102417],
+            [0.998732388019562, -0.031614251434803, 0.0391690507531166, -0.850554406642914],
+            [0.0, 0.0, 0.0, 1.0]
+        ]
+        let intrinsic = [
+            [1021.65155029297, 0.0, 993.349365234375, 0.0],
+            [0.0, 1023.78375244141, 531.9736328125, 0.0],
+            [0.0, 0.0, 1.0, 0.0]
+        ]
+        imageObj.onload = (d) => {
 
             let width = 480;
             let height = 480 * imageObj.height / imageObj.width;
-            // ctx.width = width;
-            // ctx.height = height;
-            // let width = imageObj.width;
-            // let height = imageObj.height;
-            ctx.drawImage(imageObj, 0, 0, imageObj.width, imageObj.height, 0, 0, width, height);
+            ctxImg.drawImage(imageObj, 0, 0, imageObj.width, imageObj.height, 0, 0, width, height);
+            //初始化投影控制器
+            this.imgProjectionController.init(canvas3dPreview, canvas3dPreviewSelection, height, width, imageObj.height, imageObj.width, intrinsic, extrinsic)
+            // this.canvas3dPreviewSelection.addEventListener('click', this.onPreviewImgClick.bind(this))
+            this.canvas3dPreview.addEventListener('click', this.onPreviewImgClick.bind(this))
         };
         // imageObj.src = 'http://www.html5canvastutorials.com/demos/assets/darth-vader.jpg';
         imageObj.src = imgURL;
+
+    }
+    //2d投影图像-监听事件
+    onPreviewImgClick(e) {
+        let clientX = e.clientX;
+        let clientY = e.clientY;
+        let clickObjectName = this.imgProjectionController.onClick.bind(this.imgProjectionController, clientX, clientY)()
+        if (!clickObjectName) return
+        let objectArr = Array.from(this.objects).filter(obj => obj.id === clickObjectName);
+        if (objectArr.length !== 1) return
+
+        console.log('点击对的的id是------------------', clickObjectName, objectArr[0])
+        //发送对象选中消息
+        this.sendMsg("object-select", { value: objectArr[0] });
+
     }
 
     grayIndex(idx) {
@@ -839,8 +883,9 @@ export default class SseEditor3d extends React.Component {
         this.viewFilterState = value;
         this.sendMsg("view-filter", { value });
     }
-
+    // 选中点后 图形根据模式添加或较少选中点
     selectByPolygon(polygon) {
+        debugger
         const inside = new Set();
         const outside = new Set();
         this.cloudData.forEach((pt, idx) => {
@@ -869,7 +914,7 @@ export default class SseEditor3d extends React.Component {
         } else {
             if (inside.size > 0) {
                 inside.forEach(idx => this.processSelection(idx));
-                this.notifySelectionChange();
+                this.notifySelectionChange();// 发送selection-changed广播
 
                 if (!this.autoFilterMode && this.autoFocusMode)
                     this.subsetFocus(this.selection);
@@ -894,7 +939,7 @@ export default class SseEditor3d extends React.Component {
         this.setSelectionFeedback();
 
     }
-
+    // 有问题 不同雷达显示不一样
     setHighlightFeedback() {
         if (this.cloudData && this.highlightedIndex && this.mouse.dragged === 0) {
             const data = this.cloudData[this.highlightedIndex];
@@ -911,7 +956,7 @@ export default class SseEditor3d extends React.Component {
             this.setSelectionFeedback();
         }
     }
-
+    // update 界面右下角 选择信息
     setSelectionFeedback() {
         let msg = this.selection.size + " point selected";
         if (this.selection.size > 1) {
@@ -1117,11 +1162,11 @@ export default class SseEditor3d extends React.Component {
 
     _orientationRaycasting() {
         SseGlobals.setCursor("default");
-        this.raycaster.setFromCamera(this.mouse, this.camera);
+        this.raycaster.setFromCamera(this.mouse, this.camera); // 更新射线的原点、方向
         this.orientationArrows.forEach(a => a.children[0].material.color.g = 1);
         if (this.mouse.dragged > 0)
             return;
-
+        // 检测出所有射线经过物体，包含或者不包含物体后代（参数2控制），距离远近排序、近的在数组前面
         let intersects = this.raycaster.intersectObjects(this.scene.children, true);
 
         intersects = intersects.filter(x => {
@@ -1466,12 +1511,15 @@ export default class SseEditor3d extends React.Component {
         this.cameraPreset("front", true);
     }
 
+    /**
+     * 数据添加方向箭头  用于改变点云显示的方 top front
+     */
     startPointcloudOrientation() {
         if (this.orientationArrows.size > 0)
             return;
         this.cameraPreset("front", true);
-        this.resetRotation();
-        const bbox = this.globalBox3;
+        this.resetRotation();//重置旋转
+        const bbox = this.globalBox3; //在displayall 或其他方法中 最后会调用drawGlobalBox 方法给globalbox赋值 max ：上边界 min： 下边界
         this.sendMsg("alert", {
             autoHide: false,
             message: "Point cloud orientation: Select the UP direction arrow",
@@ -1492,6 +1540,7 @@ export default class SseEditor3d extends React.Component {
             arrow.arrowDirection = direction;
             this.scene.add(arrow);
             this.orientationArrows.set(direction, arrow);
+            // 添加圆柱几何体  参数： 顶部半径、 底部半径、圆柱高度、 圆柱侧面分段数默认8、圆柱侧面沿着高度的分段数 默认1
             let geometry = new THREE.CylinderGeometry(dim, dim, dim * 3, 128);
             const meshMaterial = new THREE.MeshPhongMaterial({
                 color: 0xca7800, emissive: 0x808080,
@@ -1500,11 +1549,13 @@ export default class SseEditor3d extends React.Component {
 
             const cylinder = new THREE.Mesh(geometry, meshMaterial);
             arrow.add(cylinder);
+            // 生成圆锥体 参数 半径、高度、 侧边面数、侧边沿着高面数
             geometry = new THREE.ConeBufferGeometry(dim * 2, dim * 4, 128);
             const cone = new THREE.Mesh(geometry, meshMaterial);
+            //调整位置
             cone.position.y = dim * 2;
 
-
+            // 创建对象的坐标系 是右手坐标系  建立的形状是沿着Y轴 向上的一个圆柱
             if (direction === "front") {
                 arrow.rotation.x = HALFPI;
                 arrow.position.x = bcenter.x;
@@ -1560,16 +1611,22 @@ export default class SseEditor3d extends React.Component {
         this.pendingUpVector = this.pendingOrientationArrow = undefined;
         this.sendMsg("orientation-close");
     }
-
+    /**
+     * 设置光线投射，用于鼠标拾取（在三维控件计算出鼠标移动过什么物体）
+     * @param {} boundingBox 
+     * @param {*} numberOfPoints 
+     */
     setupRaycaster(boundingBox, numberOfPoints) {
         this.raycaster = new THREE.Raycaster();
+
         const threshold = Math.cbrt(boundingBox.x * boundingBox.y * boundingBox.z / numberOfPoints) / 3;
         this.raycaster.params.Points.threshold = threshold;
         this.raycaster.linePrecision = .1;
     }
 
     setupAxes() {
-        const axes = new THREE.AxesHelper(2);
+        // 红色代表 X 轴. 绿色代表 Y 轴. 蓝色代表 Z 轴
+        const axes = new THREE.AxesHelper(3);// 参数设定轴的长度
         this.scene.add(axes);
     }
 
@@ -1600,6 +1657,7 @@ export default class SseEditor3d extends React.Component {
     }
 
     drawGlobalBox() {
+
         const gbb = this.drawBBox(this.visibleIndices);
         this.globalBoxObject = gbb[0];
         this.globalBox3 = gbb[1];
@@ -1613,6 +1671,10 @@ export default class SseEditor3d extends React.Component {
         this.drawGlobalBox();
     }
 
+    /**
+   * 绘制一个矩形 形状由所有可视点云数据计算而出  
+   * @param {*} forEachableIndices 
+   */
     drawBBox(forEachableIndices) {
         let geom;
         if (this.hiddenIndices.size > 0) {
@@ -1651,7 +1713,10 @@ export default class SseEditor3d extends React.Component {
         this.scene.add(bh);
         return [bh, bbox];
     }
-
+    /**
+     * 绘制一个圆形球体 轴心由所有可视点云数据计算而出  
+     * @param {*} arr 
+     */
     drawBSphere(arr) {
         const flat = [];
 
@@ -1778,7 +1843,6 @@ export default class SseEditor3d extends React.Component {
     }
 
     mouseDown(ev) {
-        debugger
         // button  0：鼠标左键 1：鼠标滚轮 2：鼠标右键
         if (ev.button == 1 || this.ctrlDown) {
             this.changeTarget(ev);
@@ -1795,8 +1859,7 @@ export default class SseEditor3d extends React.Component {
     }
 
     mouseUp(ev) {
-        debugger
-        this.mouse.down = 0;
+        this.mouse.down = 0;//恢复鼠标记录 变为无按键操作
         if (this.currentTool.mouseUp)
             this.currentTool.mouseUp.bind(this.currentTool)(ev);
         this.mouse.downX = NaN;
@@ -2031,6 +2094,12 @@ export default class SseEditor3d extends React.Component {
                 return acc;
             }, this.cloudData.byClassIndex);
 
+
+            //添加原始数据用于 2d映射
+            if (!this.pointCloudsOriginalData) {
+                this.pointCloudsOriginalData = this.cloudData
+                this.imgProjectionController.setOriginalData(this.cloudData);
+            }
             this.cloudGeometry = geometry;
             this.camera.up.set(0, -1, 0);
 
