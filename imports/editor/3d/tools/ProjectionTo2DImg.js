@@ -127,7 +127,7 @@ export default class ImageProjection {
             }
         }
         // if (indexArr.size > 0 && indexArr.size <= 1) {
-        return index && this.ColorMap.has(index) ? this.ColorMap.get(index) : null
+        return this.ColorMap.has(index) ? this.ColorMap.get(index) : null
         // }
         // return null
     }
@@ -144,6 +144,7 @@ export default class ImageProjection {
         if (!!selectedDataIdx.length && !!printColor && !!mode) {
             //不同的数据源 过滤规则可能会改变:当前值投影正前方的图像
             let selectedData = selectedDataIdx.map(idx => this.originalData[idx]).filter(data => data.x >= 0)
+            if (selectedData.length < 1) return
             let point2dArrs = selectedData.map(item => this.pointProject(item))
             let r = Math.floor(selectionColor / 256 / 256);
             let g = Math.floor((selectionColor - r * 256 * 256) / 256);
@@ -151,7 +152,7 @@ export default class ImageProjection {
             let a = 255;// 因为Alpha合成时 与rgb现成 必须为255
             let indexColor = { r, g, b, a };
             // let indexColor = `rbga(${r},${g},${b},${a})`;
-            console.log('selectionColor:' + indexColor + '-------' + 'objectName:' + objectName)
+            console.log('selectionColor:' + JSON.stringify(indexColor) + '-------' + 'objectName:' + objectName)
             this.ColorMap.set(selectionColor, objectName)
             this.projectAdd(point2dArrs, printColor, indexColor)
         }

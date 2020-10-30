@@ -131,6 +131,7 @@ export default class SseDataManager {
                 if (oEvent.target.status != 200) {
                     rej();
                 } else {
+                    //添加监听 监听worker内部发出的信息
                     worker.addEventListener("message", (arg) => {
                         if (arg.data.operation == "uncompress") {
                             if (arg.data.result)
@@ -139,6 +140,7 @@ export default class SseDataManager {
                                 rej()
                         }
                     });
+                    // 向worker内部发送消息
                     worker.postMessage({ operation: "uncompress", data: oReq.response });
                 }
             };

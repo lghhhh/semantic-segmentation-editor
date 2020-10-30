@@ -20,6 +20,7 @@ import SseMsg from "../../common/SseMsg";
 import $ from "jquery";
 // import { project2d } from "./tools/ProjectionTo2D"
 import ImageProjection from "./tools/ProjectionTo2DImg"
+import { result } from 'underscore';
 
 const PI = Math.PI;
 const DOUBLEPI = PI * 2;
@@ -634,6 +635,11 @@ export default class SseEditor3d extends React.Component {
             this.imgProjectionController.init(canvas3dPreview, canvas3dPreviewSelection, height, width, imageObj.height, imageObj.width, intrinsic, extrinsic)
             // this.canvas3dPreviewSelection.addEventListener('click', this.onPreviewImgClick.bind(this))
             this.canvas3dPreview.addEventListener('click', this.onPreviewImgClick.bind(this))
+            //绘制2d映射图像
+            Array.from(this.objects).forEach((obj, index) => {
+                this.imgProjectionController.project(obj.id, obj.points, 'rgba(255,0,0,0.7)', index, 'add')
+            })
+
         };
         // imageObj.src = 'http://www.html5canvastutorials.com/demos/assets/darth-vader.jpg';
         imageObj.src = imgURL;
@@ -885,7 +891,6 @@ export default class SseEditor3d extends React.Component {
     }
     // 选中点后 图形根据模式添加或较少选中点
     selectByPolygon(polygon) {
-        debugger
         const inside = new Set();
         const outside = new Set();
         this.cloudData.forEach((pt, idx) => {
@@ -2134,11 +2139,25 @@ export default class SseEditor3d extends React.Component {
     }
 
     saveBinaryLabels() {
-        this.dataManager.saveBinaryFile(this.props.imageUrl + ".labels", this.cloudData.map(x => x.classIndex));
+        // this.dataManager.saveBinaryFile(this.props.imageUrl + ".labels", this.cloudData.map(x => x.classIndex))
+        let saveLayerObj = {
+            fileName: this.meta.file,
+            fileId: this.meta._id,
+            sseLayerIndex: this.cloudData.map(x => x.classIndex)
+        }
+        Meteor.call("saveLayerData", saveLayerObj);
+
     }
 
     saveBinaryObjects() {
-        this.dataManager.saveBinaryFile(this.props.imageUrl + ".objects", Array.from(this.objects));
+        // this.dataManager.saveBinaryFile(this.props.imageUrl + ".objects", Array.from(this.objects));
+        let saveObj = {
+            fileName: this.meta.file,
+            fileId: this.meta._id,
+            sseObject: Array.from(this.objects)
+        }
+        Meteor.call("saveSemanticObject", saveObj);
+
     }
 
     saveAll() {
@@ -2159,7 +2178,6 @@ export default class SseEditor3d extends React.Component {
         // 3d模型 旋转 缩放初始化
         this.orbiter.activate();
         setTimeout(this.resizeCanvas.bind(this), 100); // Global layout can take some time...
-
         $("#waiting").addClass("display-none");
         if (this.rgbArray.length > 0) {
             this.sendMsg("show-rgb-toggle");
@@ -2170,6 +2188,7 @@ export default class SseEditor3d extends React.Component {
         const serverMeta = SseSamples.findOne({ url: this.props.imageUrl });
         this.meta = serverMeta || { url: this.props.imageUrl };
         if (serverMeta) {
+            //socname 左侧层级关系配置名称
             this.meta.socName = serverMeta.socName;
             this.sendMsg("active-soc-name", { value: this.meta.socName });
         } else {
@@ -2179,36 +2198,73 @@ export default class SseEditor3d extends React.Component {
         this.sendMsg("currentSample", { data: this.meta });
         const fileUrl = SseGlobals.getFileUrl(this.props.imageUrl);
 
+        //获取mongodb数据
+        let uri = decodeURIComponent(this.props.imageUrl);
+        const fileName = uri.substring(uri.lastIndexOf('/') + 1)
+        // Meteor.subscribe("sse-object");
+        // Meteor.subscribe("sse-layer");
+        // const labelArray1 = Meteor.call('getLayerData', fileName, (error, result) => { ... })
+        // let semanticObj1 = Meteor.call('getSemanticObject', fileName)
+
+        const labelArray = SseLayer.findOne({ "fileName": fileName }, { _id: 0, sseLayerIndex: 1 })
+        let semanticObj = SseObject.findOne({ "fileName": fileName }, { _id: 0, sseObject: 1 })
+
         this.loadPCDFile(fileUrl).then(() => {
             this.rotateGeometry(this.meta.rotationX, this.meta.rotationY, this.meta.rotationZ);
             this.sendMsg("bottom-right-label", { message: "Loading labels..." }); // 发送消息 <seeText> 收到就显示
-            // 加载数据 如有有就
-            this.dataManager.loadBinaryFile(this.props.imageUrl + ".labels")
-                .then(result => {
-                    this.sendMsg("bottom-right-label", { message: "Loading objects..." });
-                    this.labelArray = result;
-                    this.maxClassIndex = 0;
-                    for (var i = 0; i < this.labelArray.length; i++) {
-                        if (this.labelArray[i] > this.maxClassIndex) {
-                            this.maxClassIndex = this.labelArray[i];
-                        }
-                    }
-                    this.sendMsg("maximum-classIndex", { value: this.maxClassIndex });
-                }, () => {
-                    this.saveBinaryLabels();
-                })
-                .then(() => {
-                    this.dataManager.loadBinaryFile(this.props.imageUrl + ".objects").then(result => {
-                        if (!result.forEach)
-                            result = undefined;
-                        this.display(result, this.positionArray, this.labelArray, this.rgbArray).then(() => {
+            // 加载数据 数据来源：文件
+            // this.dataManager.loadBinaryFile(this.props.imageUrl + ".labels")
+            //     .then(result => {
+            //         this.sendMsg("bottom-right-label", { message: "Loading objects..." });
+            //         this.labelArray = result;
+            //         this.maxClassIndex = 0;
+            //         for (var i = 0; i < this.labelArray.length; i++) {
+            //             if (this.labelArray[i] > this.maxClassIndex) {
+            //                 this.maxClassIndex = this.labelArray[i];
+            //             }
+            //         }
+            //         this.sendMsg("maximum-classIndex", { value: this.maxClassIndex });
+            //     }, () => {
+            //         this.saveBinaryLabels();
+            //     })
+            //     .then(() => {
+            // this.dataManager.loadBinaryFile(this.props.imageUrl + ".objects").then(result => {
+            //     if (!result.forEach)
+            //         result = undefined;
+            //     this.display(result, this.positionArray, this.labelArray, this.rgbArray).then(() => {
 
-                            this.initDone();
-                        });
-                    }, () => {
-                        this.initDone();
-                    });
+            //         this.initDone();
+            //     });
+            // }, () => {
+            //     this.initDone();
+            // });
+            //     });
+            // 加载数据 数据来源：mongoDb
+            //加载点层级
+            if (labelArray) {
+                this.sendMsg("bottom-right-label", { message: "Loading objects..." });
+                this.labelArray = labelArray.sseLayerIndex;
+                this.maxClassIndex = 0;
+                for (var i = 0; i < this.labelArray.length; i++) {
+                    if (this.labelArray[i] > this.maxClassIndex) {
+                        this.maxClassIndex = this.labelArray[i];
+                    }
+                }
+                this.sendMsg("maximum-classIndex", { value: this.maxClassIndex });
+            } else {
+                this.saveBinaryLabels();
+            }
+            //加载分割对象
+            if (semanticObj) {
+                if (!semanticObj.sseObject.forEach)
+                    semanticObj = undefined;
+                this.display(semanticObj.sseObject, this.positionArray, this.labelArray, this.rgbArray).then(() => {
+                    this.initDone();
                 });
+            } else {
+                this.initDone();
+            }
+
         });
     }
 }

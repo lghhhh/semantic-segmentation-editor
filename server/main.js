@@ -150,5 +150,38 @@ Meteor.methods({
             SseProps.upsert({ key: "tags" }, { $addToSet: { value: { $each: sample.tags } } });
         }
         SseSamples.upsert({ url: sample.url }, sample);
+    },
+    //保存pcd文件对应点层数据 层次
+    'saveLayerData'(layerData) {
+        if (layerData.fileId) {
+            SseLayer.upsert({ fileId: layerData.fileId }, layerData)
+
+        }
+    },
+    // //读取pcd文件对应点层数据 层次
+    // 'getLayerData'(fileName) {
+    //     if (fileName) {
+    //         let temp = SseLayer.findOne({})
+    //         console.log('111', temp)
+    //         return SseLayer.findOne({ "fileName": fileName }, { _id: 0, sseLayerIndex: 1 })
+    //     }
+    //     return null
+    // },
+    //保存分割对象数据
+    'saveSemanticObject'(sseObject) {
+        if (sseObject.fileId) {
+            SseObject.upsert({ fileId: sseObject.fileId }, sseObject)
+
+        }
     }
+    // //读取分割对象数据
+    // 'getSemanticObject'(fileName) {
+    //     if (fileName) {
+    //         let temp = SseObject.findOne({})
+    //         console.log('222', temp)
+    //         return SseObject.findOne({ "fileName": fileName }, { _id: 0, sseObject: 1 })
+    //     }
+    //     return null
+    // }
+
 });
