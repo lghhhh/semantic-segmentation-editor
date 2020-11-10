@@ -2,7 +2,7 @@ import postal from "postal";
 
 export default class SseMsg {
     static register(obj) {
-        if (obj.sendMsg){
+        if (obj.sendMsg) {
             return;
         }
         obj.actions = {};

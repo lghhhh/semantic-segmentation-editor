@@ -33,29 +33,53 @@ class SseNavigatorApp extends React.Component {
             this.state.data.nextPage = this.state.data.previousPage = null;
             this.setState(this.state);
         }
-        Meteor.call("images", params.path, fi, ti, (err, res) => {
-            this.setState({ data: res });
-            if (res) {
-
+        debugger
+        //改用axios调用 eggjs 后台接口=======================================================
+        React.$API.getImageDirectories(params.path, fi, ti).then(res => {
+            this.setState({ data: res.data });
+            let data = res.data
+            if (data) {
                 let msg = "";
-                if (res.folders.length > 0) {
-                    msg += res.folders.length + " folder";
-                    if (res.folders.length > 1)
+                if (data.folders.length > 0) {
+                    msg += data.folders.length + " folder";
+                    if (data.folders.length > 1)
                         msg += "s";
                 }
-                if (res.images.length > 0) {
-                    if (res.folders.length > 0)
+                if (data.images.length > 0) {
+                    if (data.folders.length > 0)
                         msg += ", ";
-                    msg += res.imagesCount + " image";
-                    if (res.imagesCount > 1)
+                    msg += data.imagesCount + " image";
+                    if (data.imagesCount > 1)
                         msg += "s";
                 }
                 this.sendMsg("folderStats", { message: msg });
-
-            } else {
-                console.log(err);
             }
-        });
+        }
+        )
+        // // ==================================================================================
+        // Meteor.call("images", params.path, fi, ti, (err, res) => {
+        //     this.setState({ data: res });
+        //     if (res) {
+
+        //         let msg = "";
+        //         if (res.folders.length > 0) {
+        //             msg += res.folders.length + " folder";
+        //             if (res.folders.length > 1)
+        //                 msg += "s";
+        //         }
+        //         if (res.images.length > 0) {
+        //             if (res.folders.length > 0)
+        //                 msg += ", ";
+        //             msg += res.imagesCount + " image";
+        //             if (res.imagesCount > 1)
+        //                 msg += "s";
+        //         }
+        //         this.sendMsg("folderStats", { message: msg });
+
+        //     } else {
+        //         console.log(err);
+        //     }
+        // });
     }
 
     componentWillReceiveProps(props) {

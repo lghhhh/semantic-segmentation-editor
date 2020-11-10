@@ -43,6 +43,7 @@ Meteor.methods({
             .variation('hard');   // Use the 'soft' color variation
         colors = colors.concat(scheme.colors());
         colors = colors.map(c => "#" + c);
+        //给配置里 没有过颜色的标签随机添加颜色
         data.forEach(soc => {
             soc.objects.forEach((oc, i) => {
                 if (!oc.color) {

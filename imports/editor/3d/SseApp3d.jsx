@@ -25,14 +25,18 @@ export default class SseApp3d extends React.Component {
 
     constructor() {
         super();
-
         this.state = {};
-
         this.classesSets = [];
-        Meteor.call("getClassesSets", (err, res) => {
-            this.classesSets = res.map(cset => new SseSetOfClasses(cset));
+        // Meteor.call("getClassesSets", (err, res) => {
+        //     this.classesSets = res.map(cset => new SseSetOfClasses(cset));
+        //     this.setState({ classesReady: true });
+        // });
+        //使用egg 接口
+        React.$API.getLayerConfig().then(response => {
+            const data = response.data["sets-of-classes"];
+            this.classesSets = data.map(cset => new SseSetOfClasses(cset));
             this.setState({ classesReady: true });
-        });
+        })
     }
 
     setupTooltips() {

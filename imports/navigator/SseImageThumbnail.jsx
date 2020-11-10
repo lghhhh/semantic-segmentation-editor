@@ -10,9 +10,13 @@ class SseImageThumbnail extends React.Component {
     }
 
     render() {
+        const baseURL = 'http://127.0.0.1:7001/api/file/image?filename='
         const image = this.props.image;
         let name = image.name;
-        let imgURL = image.url.endsWith(".pcd") ? SseGlobals.getFileUrl((image.url.replace(".pcd", ".jpg")) + "?size=small") : SseGlobals.getFileUrl(image.url + "?size=small")
+        // let imgURL = image.url.endsWith(".pcd") ? SseGlobals.getFileUrl((image.url.replace(".pcd", ".jpg")) + "?size=small") : SseGlobals.getFileUrl(image.url + "?size=small")
+
+        //向着egg 请求图片数据
+        let imgURL = name.endsWith(".pcd") ? `${baseURL + (name.replace(".pcd", ".jpg"))}` : `${baseURL + name}`;
         if (!name) {
             const durl = decodeURIComponent(image.url);
             name = durl.substring(1 + durl.lastIndexOf("/"));
