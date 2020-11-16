@@ -2194,18 +2194,13 @@ export default class SseEditor3d extends React.Component {
         } else {
             this.meta.socName = this.activeSoc.name;
         }
-
         this.sendMsg("currentSample", { data: this.meta });
-        const fileUrl = SseGlobals.getFileUrl(this.props.imageUrl);
-
-        //获取mongodb数据
+        // const fileUrl = SseGlobals.getFileUrl(this.props.imageUrl);
+        // 使用egg的接口地址
         let uri = decodeURIComponent(this.props.imageUrl);
         const fileName = uri.substring(uri.lastIndexOf('/') + 1)
-        // Meteor.subscribe("sse-object");
-        // Meteor.subscribe("sse-layer");
-        // const labelArray1 = Meteor.call('getLayerData', fileName, (error, result) => { ... })
-        // let semanticObj1 = Meteor.call('getSemanticObject', fileName)
-
+        const baseURL = 'http://127.0.0.1:7001/api/file/pcd?filename=';
+        const fileUrl = baseURL + fileName;
         const labelArray = SseLayer.findOne({ "fileName": fileName }, { _id: 0, sseLayerIndex: 1 })
         let semanticObj = SseObject.findOne({ "fileName": fileName }, { _id: 0, sseObject: 1 })
 

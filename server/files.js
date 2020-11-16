@@ -1,22 +1,22 @@
-import {Meteor} from "meteor/meteor";
+import { Meteor } from "meteor/meteor";
 import shell from "shelljs";
 import serveStatic from "serve-static";
 import bodyParser from "body-parser";
-import {createWriteStream, lstatSync, readdirSync, readFile, readFileSync} from "fs";
-import {basename, extname, join} from "path";
+import { createWriteStream, lstatSync, readdirSync, readFile, readFileSync } from "fs";
+import { basename, extname, join } from "path";
 import configurationFile from "./config";
 const demoMode = Meteor.settings.configuration["demo-mode"];
 
 Meteor.startup(() => {
 
-const {imagesFolder, pointcloudsFolder} = configurationFile;
-    WebApp.connectHandlers.use("/file", serveStatic(imagesFolder, {fallthrough: false}));
-    WebApp.connectHandlers.use("/datafile", serveStatic(pointcloudsFolder, {fallthrough: true}));
-    WebApp.connectHandlers.use("/datafile", (req,res)=>{
+    const { imagesFolder, pointcloudsFolder } = configurationFile;
+    WebApp.connectHandlers.use("/file", serveStatic(imagesFolder, { fallthrough: false }));
+    WebApp.connectHandlers.use("/datafile", serveStatic(pointcloudsFolder, { fallthrough: true }));
+    WebApp.connectHandlers.use("/datafile", (req, res) => {
         res.end("");
     });
 
-    WebApp.connectHandlers.use(bodyParser.raw({limit: "200mb", type: 'application/octet-stream'}));
+    WebApp.connectHandlers.use(bodyParser.raw({ limit: "200mb", type: 'application/octet-stream' }));
     WebApp.connectHandlers.use('/save', function (req, res) {
         if (demoMode) return;
         const fileToSave = pointcloudsFolder + decodeURIComponent(req.url).replace("/save", "");
