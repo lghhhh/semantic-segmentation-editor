@@ -33,7 +33,6 @@ class SseNavigatorApp extends React.Component {
             this.state.data.nextPage = this.state.data.previousPage = null;
             this.setState(this.state);
         }
-        debugger
         //改用axios调用 eggjs 后台接口=======================================================
         React.$API.getImageDirectories(params.path, fi, ti).then(res => {
             this.setState({ data: res.data });

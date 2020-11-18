@@ -57,7 +57,6 @@ function matrixMul(a, b) {
 }
 
 function project(coordinate) {
-    debugger
     // if (!coordinate.length == 3) return;
     // let worldCoordinate = coordinate.map(i => [i])
     let worldCoordinate = [[coordinate.x], [coordinate.y], [coordinate.z]]

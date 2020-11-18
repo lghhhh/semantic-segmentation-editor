@@ -2145,8 +2145,12 @@ export default class SseEditor3d extends React.Component {
             fileId: this.meta._id,
             sseLayerIndex: this.cloudData.map(x => x.classIndex)
         }
-        Meteor.call("saveLayerData", saveLayerObj);
 
+        let requesetConfig = {
+            // headers: { 'x-csrf-token': document.cookie.match(/(?:^|\s)csrfToken=([^;]*)/)[1] }
+        }
+        React.$API.saveSseLayer(saveLayerObj, requesetConfig)
+        // Meteor.call("saveLayerData", saveLayerObj);
     }
 
     saveBinaryObjects() {
@@ -2156,7 +2160,11 @@ export default class SseEditor3d extends React.Component {
             fileId: this.meta._id,
             sseObject: Array.from(this.objects)
         }
-        Meteor.call("saveSemanticObject", saveObj);
+        let requesetConfig = {
+            // headers: { 'x-csrf-token': document.cookie.match(/(?:^|\s)csrfToken=([^;]*)/)[1] }
+        }
+        React.$API.saveSseObject(saveObj, requesetConfig)
+        // Meteor.call("saveSemanticObject", saveObj);
 
     }
 
@@ -2198,16 +2206,17 @@ export default class SseEditor3d extends React.Component {
         // const fileUrl = SseGlobals.getFileUrl(this.props.imageUrl);
         // 使用egg的接口地址
         let uri = decodeURIComponent(this.props.imageUrl);
-        const fileName = uri.substring(uri.lastIndexOf('/') + 1)
+        const fileName = uri.substring(uri.lastIndexOf('/') + 1);
         const baseURL = 'http://127.0.0.1:7001/api/file/pcd?filename=';
         const fileUrl = baseURL + fileName;
-        const labelArray = SseLayer.findOne({ "fileName": fileName }, { _id: 0, sseLayerIndex: 1 })
-        let semanticObj = SseObject.findOne({ "fileName": fileName }, { _id: 0, sseObject: 1 })
+        // let labelArray = SseLayer.findOne({ "fileName": fileName }, { _id: 0, sseLayerIndex: 1 })
+        // let labelArray = null;
+        // let semanticObj = SseObject.findOne({ "fileName": fileName }, { _id: 0, sseObject: 1 })
 
         this.loadPCDFile(fileUrl).then(() => {
             this.rotateGeometry(this.meta.rotationX, this.meta.rotationY, this.meta.rotationZ);
             this.sendMsg("bottom-right-label", { message: "Loading labels..." }); // 发送消息 <seeText> 收到就显示
-            // 加载数据 数据来源：文件
+            // // 加载数据 数据来源：文件
             // this.dataManager.loadBinaryFile(this.props.imageUrl + ".labels")
             //     .then(result => {
             //         this.sendMsg("bottom-right-label", { message: "Loading objects..." });
@@ -2234,31 +2243,81 @@ export default class SseEditor3d extends React.Component {
             //     this.initDone();
             // });
             //     });
-            // 加载数据 数据来源：mongoDb
-            //加载点层级
-            if (labelArray) {
-                this.sendMsg("bottom-right-label", { message: "Loading objects..." });
-                this.labelArray = labelArray.sseLayerIndex;
-                this.maxClassIndex = 0;
-                for (var i = 0; i < this.labelArray.length; i++) {
-                    if (this.labelArray[i] > this.maxClassIndex) {
-                        this.maxClassIndex = this.labelArray[i];
+            // ========================================================加载数据 数据来源：mongoDb
+            // //加载点层级
+            // if (labelArray) {
+            //     this.sendMsg("bottom-right-label", { message: "Loading objects..." });
+            //     this.labelArray = labelArray.sseLayerIndex;
+            //     this.maxClassIndex = 0;
+            //     for (var i = 0; i < this.labelArray.length; i++) {
+            //         if (this.labelArray[i] > this.maxClassIndex) {
+            //             this.maxClassIndex = this.labelArray[i];
+            //         }
+            //     }
+            //     this.sendMsg("maximum-classIndex", { value: this.maxClassIndex });
+            // } else {
+            //     this.saveBinaryLabels();
+            // }
+            //-----------------数据来源 meteor---------加载分割对象
+            // if (semanticObj) {
+            //     if (!semanticObj.sseObject.forEach)
+            //         semanticObj = undefined;
+            //     this.display(semanticObj.sseObject, this.positionArray, this.labelArray, this.rgbArray).then(() => {
+            //         this.initDone();
+            //     });
+            // } else {
+            //     this.initDone();
+            // }
+
+            //===============================数据来源-------egg
+            React.$API.getSseLayer(fileName).then(
+                (response => {
+                    const data = response.data;
+                    if (data) {
+                        this.sendMsg("bottom-right-label", { message: "Loading objects..." });
+                        this.labelArray = data.sseLayerIndex;
+                        this.maxClassIndex = 0;
+                        for (var i = 0; i < this.labelArray.length; i++) {
+                            if (this.labelArray[i] > this.maxClassIndex) {
+                                this.maxClassIndex = this.labelArray[i];
+                            }
+                        }
+                        this.sendMsg("maximum-classIndex", { value: this.maxClassIndex });
+                    } else {
+                        this.saveBinaryLabels();
                     }
-                }
-                this.sendMsg("maximum-classIndex", { value: this.maxClassIndex });
-            } else {
-                this.saveBinaryLabels();
-            }
-            //加载分割对象
-            if (semanticObj) {
-                if (!semanticObj.sseObject.forEach)
-                    semanticObj = undefined;
-                this.display(semanticObj.sseObject, this.positionArray, this.labelArray, this.rgbArray).then(() => {
-                    this.initDone();
-                });
-            } else {
-                this.initDone();
-            }
+                }),
+                (rejected => {
+                    if (rejected.status == 204) {
+                        this.saveBinaryLabels();
+                    }
+                })
+            ).then(() => {
+                // delete
+                React.$API.getSseObject(fileName).then(
+                    (resolved => {
+                        const semanticObj = resolved.data
+                        if (semanticObj) {
+                            if (!semanticObj.sseObject.forEach)
+                                semanticObj = undefined;
+                            this.display(semanticObj.sseObject, this.positionArray, this.labelArray, this.rgbArray).then(() => {
+                                this.initDone();
+                            });
+                        } else {
+
+                        }
+                    }),
+                    (rejected => {
+                        if (rejected.status == 204) {
+                            this.initDone();
+                        }
+                    })
+                )
+
+
+
+            })
+
 
         });
     }

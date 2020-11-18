@@ -16,7 +16,23 @@ export default {
     },
     getLayerConfig() {
         return axios.get(`/data/config`)
+    },
+    //========= pcd文件层级结构
+    getSseLayer(file) {
+        return axios.get(`/data/layers/${file}`)
+    },
+    saveSseLayer(data, config = {}) {
+        // 保存JSON格式的数据
+        return axios.post(`/data/layers`, data, config)
+    },
+    //========= pdc文件语义 分割对象
+    getSseObject(file) {
+        return axios.get(`/data/sseobject/${file}`)
+    },
+    saveSseObject(data, config) {
+        return axios.post(`/data/sseobject`, data, config)
     }
+
 
 
 }
